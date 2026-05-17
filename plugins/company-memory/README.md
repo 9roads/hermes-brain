@@ -13,7 +13,7 @@ It does four things:
 
 The runtime must set:
 
-- `COMPANY_MEMORY_WIKI_ROOT`, normally `/opt/data/profiles/phoenix/wiki`
+- `COMPANY_MEMORY_WIKI_ROOT`, normally `/opt/data/workspace/wiki`
 
 Session summaries use the main Hermes model. The plugin does not configure or select a separate summary model.
 

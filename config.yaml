@@ -7,6 +7,9 @@ model:
 approvals:
   mode: smart
 
+terminal:
+  cwd: /opt/data/workspace
+
 mcp_servers:
   composio:
     url: ${COMPOSIO_MCP_URL}

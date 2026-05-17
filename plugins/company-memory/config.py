@@ -7,6 +7,7 @@ from pathlib import Path
 
 PLUGIN_STATE_DIR_NAME = "company-memory"
 SUMMARY_SCHEMA_VERSION = "company-memory-session-summary-v1"
+DEFAULT_WIKI_ROOT = "/opt/data/workspace/wiki"
 
 
 @dataclass(frozen=True)
@@ -20,7 +21,7 @@ class PluginConfig:
 
 def load_config() -> PluginConfig:
     hermes_home = Path(os.environ.get("HERMES_HOME") or str(Path.home() / ".hermes"))
-    wiki_root = Path(os.environ.get("COMPANY_MEMORY_WIKI_ROOT") or str(hermes_home / "wiki"))
+    wiki_root = Path(os.environ.get("COMPANY_MEMORY_WIKI_ROOT") or DEFAULT_WIKI_ROOT)
     state_dir = hermes_home / "local" / PLUGIN_STATE_DIR_NAME
 
     return PluginConfig(

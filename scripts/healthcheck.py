@@ -5,12 +5,13 @@ import sys
 import urllib.request
 
 DEFAULT_HERMES_HOME = "/opt/data/profiles/phoenix"
+DEFAULT_WIKI_ROOT = "/opt/data/workspace/wiki"
 
 api_key = os.environ.get("API_SERVER_KEY")
 port = os.environ.get("API_SERVER_PORT", "8642")
 home = os.environ.get("HERMES_HOME", DEFAULT_HERMES_HOME)
 state_path = os.path.join(home, "gateway_state.json")
-wiki_root = os.environ.get("COMPANY_MEMORY_WIKI_ROOT") or os.path.join(home, "wiki")
+wiki_root = os.environ.get("COMPANY_MEMORY_WIKI_ROOT") or DEFAULT_WIKI_ROOT
 
 # 1. API health
 headers = {}
