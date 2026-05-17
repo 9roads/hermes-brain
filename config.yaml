@@ -64,9 +64,6 @@ cron:
 
 file_read_max_chars: 100000
 
-terminal:
-  cwd: /opt/data/workspace
-
 tool_output:
   max_bytes: 50000
   max_lines: 2000
