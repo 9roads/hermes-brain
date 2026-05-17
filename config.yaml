@@ -1,0 +1,98 @@
+model:
+  provider: custom
+  default: gpt-5.5
+  base_url: ${OPENAI_BASE_URL}
+  api_mode: codex_responses
+
+mcp_servers:
+  composio:
+    url: ${COMPOSIO_MCP_URL}
+    headers:
+      x-api-key: ${COMPOSIO_MCP_HEADER_X_API_KEY}
+    enabled: true
+
+agent:
+  max_turns: 90
+  disabled_toolsets: []
+
+plugins:
+  enabled:
+    - company-memory
+    - phoenix-slack-surface
+  entries:
+    company-memory:
+      llm:
+        allow_model_override: true
+        allowed_models:
+          - "*"
+
+display:
+  busy_input_mode: steer
+  busy_ack_enabled: false
+
+onboarding:
+  seen:
+    busy_input_prompt: true
+
+platforms:
+  slack:
+    gateway_restart_notification: false
+    extra:
+      allow_admin_from:
+        - "__phoenix_no_slack_admins__"
+      group_allow_admin_from:
+        - "__phoenix_no_slack_admins__"
+      user_allowed_commands:
+        - phoenix
+        - sethome
+      group_user_allowed_commands:
+        - phoenix
+        - sethome
+
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  memory_char_limit: 2200
+  user_char_limit: 1375
+
+cron:
+  wrap_response: false
+  script_timeout_seconds: 120
+
+file_read_max_chars: 100000
+
+terminal:
+  cwd: /opt/data/workspace
+
+tool_output:
+  max_bytes: 50000
+  max_lines: 2000
+  max_line_length: 2000
+
+skills:
+  disabled:
+    - llm-wiki
+  config:
+    company_memory:
+      wiki_root: ${COMPANY_MEMORY_WIKI_ROOT}
+      workspace_id: ${PHOENIX_WORKSPACE_ID}
+      workspace_name: ${PHOENIX_WORKSPACE_NAME}
+
+web:
+  backend: firecrawl
+  use_gateway: true
+
+image_gen:
+  model: fal-ai/flux-2/klein/9b
+  use_gateway: true
+
+tts:
+  provider: openai
+  use_gateway: true
+  openai:
+    model: gpt-4o-mini-tts
+    voice: alloy
+
+browser:
+  cloud_provider: browser-use
+  use_gateway: true

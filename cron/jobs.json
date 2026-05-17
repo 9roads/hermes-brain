@@ -1,0 +1,79 @@
+{
+  "jobs": [
+    {
+      "id": "companymemwiki01",
+      "name": "company-memory-wiki-processor",
+      "prompt": "Task: company-memory wiki processor.\n\nUse the `company-memory` skill and the default company-memory wiki read context.\n\nEvery 15 minutes, process new low-confidence raw receipts from:\n\n- the configured wiki root's `raw/session-summaries/`\n- the configured wiki root's `raw/runs/`\n\nRules:\n\n- Read `SCHEMA.md`, `index.md`, `current-state.md`, recent `logs/wiki-changes.md`, and relevant source ledgers before writing.\n- If the wiki is empty, initialize the company-memory wiki structure with minimal core files before processing receipts.\n- Treat raw receipts as source pointers and summaries, not source truth.\n- Update curated pages only for durable work memory: decisions, owners, product/roadmap changes, project state, architecture, customer patterns, risks, open questions, contradictions, stale assumptions, and work-relevant preferences.\n- Prefer updating existing pages over creating new pages.\n- Preserve uncertainty and contradictions with dates and compact source refs.\n- Update `index.md`, `current-state.md`, affected `indexes/*`, source ledgers, and `logs/wiki-changes.md` when content changes.\n- Do not copy raw Slack threads, emails, docs, issue bodies, payload dumps, secrets, preview URLs, `.env`, `auth.json`, bearer tokens, private personal details, protected traits, gossip, or performance criticism into the wiki.\n- Do not post to Slack or any external platform from this maintenance job.\n\nReturn `[SILENT]` if nothing changed. Otherwise return compact safe status only: changed wiki paths, ledger paths, processed counts, next crawl targets, and safe errors.",
+      "skills": ["company-memory"],
+      "skill": "company-memory",
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {
+        "kind": "interval",
+        "minutes": 15,
+        "display": "every 15m"
+      },
+      "schedule_display": "every 15m",
+      "repeat": {
+        "times": null,
+        "completed": 0
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-05-17T00:00:00+00:00",
+      "next_run_at": null,
+      "last_run_at": null,
+      "last_status": null,
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "local",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null
+    },
+    {
+      "id": "companymemcrawl1",
+      "name": "company-memory-source-crawl-controller",
+      "prompt": "Task: company-memory source crawl controller.\n\nUse the `company-memory` skill, Composio MCP, and the adaptive policy emitted by the pre-check script.\n\nGoal: discover recent, interesting, or patterned company-tool activity and write safe raw ingestion artifacts to the configured wiki root's `raw/runs/` for later wiki processing.\n\nRules:\n\n- Use Composio MCP and remote workbench capabilities for connected company tools.\n- Discover connected toolkits and available read/list/search/detail tools.\n- Classify tools before use. Use only read-only tools by default.\n- Reject mutating actions matching send, create, update, delete, archive, label, invite, post, react, share, approve, or permission changes unless a future explicit user-approved feature allows them.\n- Discover containers first: channels, repos, projects, folders, boards, labels, databases, or equivalent toolkit containers.\n- Breadth-list recent objects, rank high-signal items, and depth-read only capped candidates.\n- Use bounded subagents only inside the run when multiple hot toolkits need parallel inspection; the parent remains the single writer.\n- Emit compact summaries, provenance, source refs, timestamps, hashes, scores, pattern tags, entities, and redaction metadata.\n- Do not store full Slack threads, email bodies, docs dumps, ticket bodies, provider payloads, secrets, long excerpts, or private personal details.\n- Update the configured wiki root's `raw/_state/adaptive-policy.json`, cursors, ledgers, and next crawl targets.\n- Leave enough Composio rate-limit budget for user-facing work.\n\nReturn `[SILENT]` if no useful crawl occurred. Otherwise return compact safe status only.",
+      "skills": ["company-memory"],
+      "skill": "company-memory",
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": "company-memory-source-crawl-precheck.py",
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {
+        "kind": "interval",
+        "minutes": 15,
+        "display": "every 15m"
+      },
+      "schedule_display": "every 15m",
+      "repeat": {
+        "times": null,
+        "completed": 0
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-05-17T00:00:00+00:00",
+      "next_run_at": null,
+      "last_run_at": null,
+      "last_status": null,
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "local",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null
+    }
+  ],
+  "updated_at": "2026-05-17T00:00:00+00:00"
+}

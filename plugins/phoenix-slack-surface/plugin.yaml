@@ -1,0 +1,6 @@
+name: phoenix-slack-surface
+version: 0.1.0
+description: Phoenix-branded Slack slash command surface.
+author: Phoenix
+provides_hooks:
+  - pre_gateway_dispatch

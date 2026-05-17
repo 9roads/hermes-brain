@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo
+;
+[subrepo]
+	remote = https://github.com/9roads/hermes-brain
+	branch = main
+	commit =
+	parent =
+	method = merge
+	cmdver =

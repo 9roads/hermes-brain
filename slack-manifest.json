@@ -1,0 +1,93 @@
+{
+  "_metadata": {
+    "major_version": 1,
+    "minor_version": 1
+  },
+  "display_information": {
+    "name": "Phoenix",
+    "description": "Phoenix company-memory agent on Slack",
+    "background_color": "#1a1a2e"
+  },
+  "features": {
+    "app_home": {
+      "home_tab_enabled": false,
+      "messages_tab_enabled": true,
+      "messages_tab_read_only_enabled": false
+    },
+    "bot_user": {
+      "display_name": "Phoenix",
+      "always_online": true
+    },
+    "slash_commands": [
+      {
+        "command": "/phoenix",
+        "description": "Ask Phoenix about this workspace",
+        "should_escape": false,
+        "url": "https://phoenix.local/slack/commands",
+        "usage_hint": "<message>"
+      },
+      {
+        "command": "/sethome",
+        "description": "Set this chat as the home channel",
+        "should_escape": false,
+        "url": "https://phoenix.local/slack/commands"
+      },
+      {
+        "command": "/whoami",
+        "description": "Show your slash command access",
+        "should_escape": false,
+        "url": "https://phoenix.local/slack/commands"
+      }
+    ],
+    "assistant_view": {
+      "assistant_description": "Chat with Phoenix in threads and DMs."
+    }
+  },
+  "oauth_config": {
+    "redirect_urls": [
+      "https://backend.composio.dev/api/v1/auth-apps/add",
+      "https://backend.composio.dev/api/v3.1/toolkits/auth/callback"
+    ],
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "assistant:write",
+        "channels:history",
+        "channels:read",
+        "chat:write",
+        "commands",
+        "files:read",
+        "files:write",
+        "groups:history",
+        "groups:read",
+        "im:history",
+        "im:read",
+        "im:write",
+        "reactions:read",
+        "reactions:write",
+        "team:read",
+        "users:read"
+      ]
+    },
+    "pkce_enabled": false
+  },
+  "settings": {
+    "event_subscriptions": {
+      "bot_events": [
+        "app_mention",
+        "assistant_thread_context_changed",
+        "assistant_thread_started",
+        "message.channels",
+        "message.groups",
+        "message.im"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": true
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": true,
+    "token_rotation_enabled": false,
+    "is_mcp_enabled": false
+  }
+}

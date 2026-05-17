@@ -1,0 +1,7 @@
+name: phoenix
+version: 0.2.3
+description: Phoenix company-memory Hermes profile
+profile:
+  name: phoenix
+  owner: phoenix
+  source: https://github.com/9roads/hermes-brain

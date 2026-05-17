@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "composio": {
+      "url": "${COMPOSIO_MCP_URL}",
+      "headers": {
+        "x-api-key": "${COMPOSIO_MCP_HEADER_X_API_KEY}"
+      }
+    }
+  }
+}
