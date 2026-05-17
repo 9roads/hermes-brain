@@ -4,10 +4,13 @@ import os
 import sys
 import urllib.request
 
+DEFAULT_HERMES_HOME = "/opt/data/profiles/phoenix"
+
 api_key = os.environ.get("API_SERVER_KEY")
 port = os.environ.get("API_SERVER_PORT", "8642")
-home = os.environ.get("HERMES_HOME", "/opt/data")
+home = os.environ.get("HERMES_HOME", DEFAULT_HERMES_HOME)
 state_path = os.path.join(home, "gateway_state.json")
+wiki_root = os.environ.get("COMPANY_MEMORY_WIKI_ROOT") or os.path.join(home, "wiki")
 
 # 1. API health
 headers = {}
@@ -46,6 +49,19 @@ bad_platforms = {
 
 if bad_platforms:
     print(f"bad platforms: {bad_platforms}", file=sys.stderr)
+    sys.exit(1)
+
+# 3. Company-memory wiki scaffold
+required_wiki_files = ("SCHEMA.md", "index.md", "current-state.md")
+missing_wiki_files = [
+    name for name in required_wiki_files if not os.path.isfile(os.path.join(wiki_root, name))
+]
+
+if missing_wiki_files:
+    print(
+        f"wiki scaffold missing under {wiki_root}: {', '.join(missing_wiki_files)}",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 print("ok")

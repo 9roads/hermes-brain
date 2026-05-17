@@ -9,13 +9,14 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_WIKI_ROOT = "/mnt/company-memory-wiki"
+DEFAULT_HERMES_HOME = "/opt/data/profiles/phoenix"
 DEFAULT_MIN_INTERVAL_MINUTES = 15
 DEFAULT_STANDARD_INTERVAL_MINUTES = 60
 
 
 def main() -> int:
-    wiki_root = Path(os.environ.get("COMPANY_MEMORY_WIKI_ROOT") or DEFAULT_WIKI_ROOT)
+    hermes_home = Path(os.environ.get("HERMES_HOME") or DEFAULT_HERMES_HOME)
+    wiki_root = Path(os.environ.get("COMPANY_MEMORY_WIKI_ROOT") or str(hermes_home / "wiki"))
     state_dir = wiki_root / "raw" / "_state"
     policy_path = state_dir / "adaptive-policy.json"
     now = datetime.now(timezone.utc)

@@ -1,6 +1,15 @@
 name: phoenix
 version: 0.2.3
 description: Phoenix company-memory Hermes profile
+distribution_owned:
+  - SOUL.md
+  - config.yaml
+  - mcp.json
+  - skills
+  - plugins
+  - cron
+  - scripts
+  - distribution.yaml
 profile:
   name: phoenix
   owner: phoenix

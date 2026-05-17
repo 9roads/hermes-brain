@@ -7,7 +7,7 @@ description: Maintain the source-grounded company-memory wiki; use for source in
 
 Use this skill whenever you inspect connected source tools, maintain the company-memory wiki, answer workspace-memory questions, update source ledgers, or manage source ingestion after a new connection.
 
-The wiki root is configured by `COMPANY_MEMORY_WIKI_ROOT`, normally `/mnt/company-memory-wiki`.
+The wiki root is configured by `COMPANY_MEMORY_WIKI_ROOT`, normally `/opt/data/profiles/phoenix/wiki`.
 
 The bundled `llm-wiki` skill is intentionally disabled for this profile. Follow this company-memory LLM wiki contract instead.
 
