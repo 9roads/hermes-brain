@@ -4,6 +4,9 @@ model:
   base_url: ${OPENAI_BASE_URL}
   api_mode: codex_responses
 
+approvals:
+  mode: smart
+
 mcp_servers:
   composio:
     url: ${COMPOSIO_MCP_URL}
