@@ -1,0 +1,13 @@
+name: phoenix-trigger-subscriptions
+version: 0.1.0
+description: Phoenix-managed Composio trigger subscription tools.
+author: Phoenix
+provides_tools:
+  - list_triggers
+  - create_trigger
+  - delete_trigger
+  - get_active_triggers
+requires_env:
+  - PHOENIX_BACKEND_URL
+  - PHOENIX_WORKSPACE_ID
+  - PHOENIX_HERMES_PLUGIN_TOKEN

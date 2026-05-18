@@ -25,6 +25,7 @@ plugins:
   enabled:
     - company-memory
     - phoenix-slack-surface
+    - phoenix-trigger-subscriptions
   entries:
     company-memory:
       llm:
@@ -41,6 +42,9 @@ onboarding:
     busy_input_prompt: true
 
 platforms:
+  webhook:
+    extra:
+      host: 0.0.0.0
   slack:
     gateway_restart_notification: false
     extra:
@@ -75,6 +79,7 @@ tool_output:
 skills:
   disabled:
     - llm-wiki
+    - webhook-subscriptions
   config:
     company_memory:
       wiki_root: ${COMPANY_MEMORY_WIKI_ROOT}
