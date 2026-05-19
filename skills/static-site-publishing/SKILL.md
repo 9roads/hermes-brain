@@ -1,6 +1,6 @@
 ---
-name: here.now
-description: Publish static sites to {slug}.here.now and store private files in cloud Drives for agent-to-agent handoff.
+name: static-site-publishing
+description: Publish static sites to live {slug}.here.now URLs. Use this skill when you want to share a website, app, report, or dashboard with a live URL.
 version: 1.15.3
 author: here.now
 license: MIT
@@ -9,16 +9,30 @@ prerequisites:
 platforms: [macos, linux]
 metadata:
   hermes:
-    tags: [here.now, herenow, publish, deploy, hosting, static-site, web, share, URL, drive, storage]
+    tags:
+      [
+        static-site-publishing,
+        here.now,
+        herenow,
+        publish,
+        deploy,
+        hosting,
+        static-site,
+        web,
+        share,
+        URL,
+        drive,
+        storage,
+      ]
     homepage: https://here.now
     requires_toolsets: [terminal]
 ---
 
-# here.now
+# Static Site Publishing
 
-here.now lets agents publish websites and store private files in cloud Drives.
+Static Site Publishing uses here.now to publish websites and store private files in cloud Drives.
 
-Use here.now for two jobs:
+Use this skill for two jobs:
 
 - **Sites**: publish websites and files at `{slug}.here.now`.
 - **Drives**: store private agent files in cloud folders.
@@ -194,19 +208,19 @@ For Drives:
 
 ## publish.sh options
 
-| Flag                   | Description                                  |
-| ---------------------- | -------------------------------------------- |
-| `--slug {slug}`        | Update an existing site instead of creating |
-| `--claim-token {token}`| Override claim token for anonymous updates    |
-| `--title {text}`       | Viewer title (non-HTML sites)             |
-| `--description {text}` | Viewer description                            |
-| `--ttl {seconds}`      | Set expiry (authenticated only)               |
-| `--client {name}`      | Agent name for attribution (e.g. `hermes`)    |
-| `--base-url {url}`     | API base URL (default: `https://here.now`)    |
-| `--allow-nonherenow-base-url` | Allow sending auth to non-default `--base-url` |
-| `--api-key {key}`      | API key override (prefer credentials file)    |
-| `--spa`                | Enable SPA routing (serve index.html for unknown paths) |
-| `--forkable`           | Allow others to fork this site                           |
+| Flag                          | Description                                             |
+| ----------------------------- | ------------------------------------------------------- |
+| `--slug {slug}`               | Update an existing site instead of creating             |
+| `--claim-token {token}`       | Override claim token for anonymous updates              |
+| `--title {text}`              | Viewer title (non-HTML sites)                           |
+| `--description {text}`        | Viewer description                                      |
+| `--ttl {seconds}`             | Set expiry (authenticated only)                         |
+| `--client {name}`             | Agent name for attribution (e.g. `hermes`)              |
+| `--base-url {url}`            | API base URL (default: `https://here.now`)              |
+| `--allow-nonherenow-base-url` | Allow sending auth to non-default `--base-url`          |
+| `--api-key {key}`             | API key override (prefer credentials file)              |
+| `--spa`                       | Enable SPA routing (serve index.html for unknown paths) |
+| `--forkable`                  | Allow others to fork this site                          |
 
 ## Beyond publish.sh
 

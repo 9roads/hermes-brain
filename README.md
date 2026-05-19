@@ -6,12 +6,12 @@ Edit static agent behavior here: `SOUL.md`, `config.yaml`, `skills/`, `plugins/`
 
 Hermes reads MCP servers from `config.yaml` under `mcp_servers`; Phoenix should not add MCP servers to an installed sandbox at runtime.
 
-Hermes docs:
+Reference docs:
 
 - [Profiles: Running Multiple Agents](https://hermes-agent.nousresearch.com/docs/user-guide/profiles)
 - [Profile Distributions: Share a Whole Agent](https://hermes-agent.nousresearch.com/docs/user-guide/profile-distributions)
 - [Working with Skills](https://hermes-agent.nousresearch.com/docs/guides/work-with-skills/)
-- [here.now optional skill](https://hermes-agent.nousresearch.com/docs/user-guide/skills/optional/productivity/productivity-here-now)
+- [here.now docs](https://here.now/docs)
 
 Do not commit `.env`, `auth.json`, memories, sessions, `state.db*`, logs, caches, workspace state, or OAuth tokens.
 

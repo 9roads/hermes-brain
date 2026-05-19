@@ -123,7 +123,7 @@ if [[ -n "$FROM_DRIVE" ]]; then
   fi
   [[ "$FORKABLE" == "true" ]] && BODY=$(echo "$BODY" | "$JQ_BIN" '.forkable = true')
   [[ "$SPA_MODE" == "true" ]] && BODY=$(echo "$BODY" | "$JQ_BIN" '.spaMode = true')
-  CLIENT_HEADER_VALUE="here-now-publish-sh"
+  CLIENT_HEADER_VALUE="static-site-publishing-publish-sh"
   if [[ -n "$CLIENT" ]]; then
     normalized_client=$(echo "$CLIENT" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-')
     normalized_client="${normalized_client#-}"
@@ -293,7 +293,7 @@ if [[ -n "$API_KEY" ]]; then
   AUTH_MODE="authenticated"
 fi
 
-CLIENT_HEADER_VALUE="here-now-publish-sh"
+CLIENT_HEADER_VALUE="static-site-publishing-publish-sh"
 if [[ -n "$CLIENT" ]]; then
   normalized_client=$(echo "$CLIENT" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-')
   normalized_client="${normalized_client#-}"
