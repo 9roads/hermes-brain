@@ -2,16 +2,20 @@ from __future__ import annotations
 
 import importlib
 import logging
+import os
+from pathlib import Path
 from typing import Any
 
 
 LOGGER = logging.getLogger(__name__)
 
 PATCH_MARKER = "__phoenix_slack_markdown_blocks_patched__"
+ASSISTANT_STATUS_PATCH_MARKER = "__phoenix_slack_assistant_status_patched__"
 
 
 def register(ctx: Any) -> None:
     patch_slack_adapter()
+    patch_slack_assistant_status()
     patch_send_message_tool()
 
 
@@ -150,6 +154,80 @@ def patch_slack_adapter() -> bool:
     slack_adapter.send = send
     slack_adapter.edit_message = edit_message
     return True
+
+
+def patch_slack_assistant_status() -> bool:
+    if not slack_assistant_status_disabled():
+        return False
+
+    try:
+        slack_module = importlib.import_module("gateway.platforms.slack")
+    except Exception as exc:
+        LOGGER.info("Slack assistant status patch unavailable: %s", exc)
+        return False
+
+    slack_adapter = getattr(slack_module, "SlackAdapter", None)
+    if slack_adapter is None:
+        LOGGER.info("Slack assistant status patch unavailable: missing SlackAdapter")
+        return False
+
+    original_send_typing = getattr(slack_adapter, "send_typing", None)
+    if original_send_typing is None:
+        LOGGER.info("Slack assistant status patch unavailable: missing send_typing")
+        return False
+
+    if getattr(getattr(slack_adapter, "send_typing", None), ASSISTANT_STATUS_PATCH_MARKER, False):
+        return True
+
+    async def send_typing(self: Any, chat_id: str, metadata: dict[str, Any] | None = None) -> None:
+        return None
+
+    setattr(send_typing, ASSISTANT_STATUS_PATCH_MARKER, True)
+
+    if not hasattr(slack_adapter, "_phoenix_original_send_typing"):
+        slack_adapter._phoenix_original_send_typing = original_send_typing
+
+    slack_adapter.send_typing = send_typing
+    return True
+
+
+def slack_assistant_status_disabled() -> bool:
+    config = load_profile_config()
+    value = (
+        config.get("display", {})
+        .get("platforms", {})
+        .get("slack", {})
+        .get("assistant_status")
+    )
+    return is_off(value)
+
+
+def load_profile_config() -> dict[str, Any]:
+    home = os.environ.get("HERMES_HOME")
+    if not home:
+        return {}
+
+    config_path = Path(home) / "config.yaml"
+    if not config_path.exists():
+        return {}
+
+    try:
+        import yaml
+
+        loaded = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        LOGGER.info("Slack assistant status config unavailable: %s", exc)
+        return {}
+
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def is_off(value: Any) -> bool:
+    if value is False:
+        return True
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"off", "false", "0", "no", "disabled"}
 
 
 def patch_send_message_tool() -> bool:
