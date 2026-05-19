@@ -27,12 +27,6 @@
         "usage_hint": "<message>"
       },
       {
-        "command": "/sethome",
-        "description": "Set this chat as the home channel",
-        "should_escape": false,
-        "url": "https://phoenix.local/slack/commands"
-      },
-      {
         "command": "/whoami",
         "description": "Show your slash command access",
         "should_escape": false,

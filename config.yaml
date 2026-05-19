@@ -24,6 +24,8 @@ agent:
 plugins:
   enabled:
     - company-memory
+    - phoenix-slack-markdown-blocks
+    - phoenix-slack-home
     - phoenix-slack-surface
     - phoenix-trigger-subscriptions
   entries:
@@ -57,10 +59,8 @@ platforms:
         - "__phoenix_no_slack_admins__"
       user_allowed_commands:
         - phoenix
-        - sethome
       group_user_allowed_commands:
         - phoenix
-        - sethome
 
 memory:
   memory_enabled: true

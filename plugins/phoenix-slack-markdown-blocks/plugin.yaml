@@ -1,0 +1,4 @@
+name: phoenix-slack-markdown-blocks
+version: 0.1.0
+description: Phoenix compatibility patch for Slack Block Kit markdown rendering.
+author: Phoenix

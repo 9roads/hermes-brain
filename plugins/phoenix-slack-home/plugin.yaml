@@ -1,0 +1,8 @@
+name: phoenix-slack-home
+version: 0.1.0
+description: Phoenix-managed Slack home channel selection and runtime sync.
+author: Phoenix
+provides_hooks:
+  - pre_gateway_dispatch
+provides_tools:
+  - set_slack_home_channel
