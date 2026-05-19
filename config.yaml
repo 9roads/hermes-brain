@@ -19,6 +19,7 @@ mcp_servers:
 
 agent:
   max_turns: 90
+  reasoning_effort: high
   disabled_toolsets: []
 
 plugins:
