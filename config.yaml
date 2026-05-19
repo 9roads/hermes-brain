@@ -38,6 +38,10 @@ plugins:
 display:
   busy_input_mode: steer
   busy_ack_enabled: false
+  interim_assistant_messages: false
+  platforms:
+    slack:
+      tool_progress: "off"
 
 onboarding:
   seen:
