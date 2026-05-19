@@ -221,6 +221,10 @@ Then call:
 6. Composio sends project webhook events to Phoenix. Phoenix verifies the Composio webhook, maps the trigger ID to the workspace trigger, normalizes the payload, signs the forwarded body with the Hermes route secret, and posts it to the Hermes route.
 7. Hermes either runs the agent with the rendered prompt or uses direct Slack delivery, depending on `deliver_only`.
 
+## No available triggers?
+
+If `list_triggers` dont return any relevant trigger types for what you are trying to do you can fallback to standard schedule cron that will check in reasonable and use existing mcp connected tools to accomplish the task.
+
 ## Safety
 
 - Never include route secrets in user-facing summaries.
