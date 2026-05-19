@@ -23,12 +23,6 @@ def register(ctx: Any) -> None:
         handler=tools.list_triggers,
     )
     ctx.register_tool(
-        name="get_trigger_schema",
-        toolset=TOOLSET,
-        schema=schemas.GET_TRIGGER_SCHEMA,
-        handler=tools.get_trigger_schema,
-    )
-    ctx.register_tool(
         name="create_trigger",
         toolset=TOOLSET,
         schema=schemas.CREATE_TRIGGER,
@@ -39,4 +33,10 @@ def register(ctx: Any) -> None:
         toolset=TOOLSET,
         schema=schemas.DELETE_TRIGGER,
         handler=tools.delete_trigger,
+    )
+    ctx.register_tool(
+        name="get_active_triggers",
+        toolset=TOOLSET,
+        schema=schemas.GET_ACTIVE_TRIGGERS,
+        handler=tools.get_active_triggers,
     )

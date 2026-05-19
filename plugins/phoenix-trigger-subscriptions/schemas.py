@@ -3,7 +3,23 @@ from __future__ import annotations
 
 DELIVERY_TARGETS = [
     "log",
+    "github_comment",
+    "telegram",
+    "discord",
     "slack",
+    "signal",
+    "sms",
+    "whatsapp",
+    "matrix",
+    "mattermost",
+    "homeassistant",
+    "email",
+    "dingtalk",
+    "feishu",
+    "wecom",
+    "weixin",
+    "bluebubbles",
+    "qqbot",
 ]
 
 STRING_OR_STRING_LIST = {
@@ -19,8 +35,8 @@ STRING_OR_STRING_LIST = {
 WEBHOOK = {
     "type": "object",
     "description": (
-        "Hermes dynamic webhook route options for Phoenix trigger subscriptions. "
-        "Only log and Slack delivery are enabled in this profile."
+        "Hermes dynamic webhook route options. Mirrors the documented "
+        "hermes webhook subscribe CLI surface; unsupported delivery extras are omitted."
     ),
     "additionalProperties": False,
     "properties": {
@@ -52,17 +68,17 @@ WEBHOOK = {
         "deliver": {
             "type": "string",
             "enum": DELIVERY_TARGETS,
-            "description": "Where Hermes should deliver the agent result. Supported values: log, slack.",
+            "description": "Where Hermes should deliver the agent result.",
         },
         "deliver_chat_id": {
             "type": "string",
-            "description": "Slack channel/chat ID mapped to --deliver-chat-id.",
+            "description": "Target chat or channel ID mapped to --deliver-chat-id.",
         },
         "deliver_only": {
             "type": "boolean",
             "description": (
                 "When true, skip the agent and deliver the rendered prompt directly. "
-                "Requires deliver to be slack."
+                "Requires a real delivery target, not log."
             ),
         },
     },
@@ -72,8 +88,7 @@ LIST_TRIGGERS = {
     "name": "list_triggers",
     "description": (
         "List available Composio trigger types for connected accounts in the current "
-        "Phoenix workspace. Returns compact trigger summaries; call get_trigger_schema "
-        "for the selected trigger before creating it."
+        "Phoenix workspace. Use before creating a trigger to inspect required config."
     ),
     "parameters": {
         "type": "object",
@@ -82,10 +97,7 @@ LIST_TRIGGERS = {
             "toolkit_slugs": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": (
-                    "Optional toolkit slugs to filter, such as github or googlesheets. "
-                    "Trigger tools do not apply to Slack connections."
-                ),
+                "description": "Optional toolkit slugs to filter, such as github or slack.",
             },
             "connected_account_id": {
                 "type": "string",
@@ -95,15 +107,25 @@ LIST_TRIGGERS = {
                 "type": "string",
                 "description": "Optional search text for trigger names, slugs, or descriptions.",
             },
+            "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Maximum trigger types to return.",
+            },
+            "cursor": {
+                "type": "string",
+                "description": "Pagination cursor returned by the backend.",
+            },
         },
     },
 }
 
-GET_TRIGGER_SCHEMA = {
-    "name": "get_trigger_schema",
+CREATE_TRIGGER = {
+    "name": "create_trigger",
     "description": (
-        "Return full Composio trigger schema details for a trigger selected from "
-        "list_triggers, including setup config and payload schema. Call before create_trigger."
+        "Create a Composio trigger instance through Phoenix, then create the matching "
+        "Hermes dynamic webhook route in the Phoenix profile."
     ),
     "parameters": {
         "type": "object",
@@ -113,32 +135,12 @@ GET_TRIGGER_SCHEMA = {
                 "type": "string",
                 "description": "Composio trigger slug from list_triggers.",
             },
-        },
-        "required": ["trigger_slug"],
-    },
-}
-
-CREATE_TRIGGER = {
-    "name": "create_trigger",
-    "description": (
-        "Create a Composio trigger instance through Phoenix, then create the matching "
-        "Hermes dynamic webhook route in the Phoenix profile. Call get_trigger_schema "
-        "for the selected trigger first."
-    ),
-    "parameters": {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "trigger_slug": {
-                "type": "string",
-                "description": "Composio trigger slug from list_triggers after inspecting get_trigger_schema.",
-            },
             "trigger_config": {
                 "type": "object",
                 "additionalProperties": True,
                 "description": (
-                    "Provider-specific trigger config from get_trigger_schema. Keys are "
-                    "passed through to Phoenix for validation and Composio creation."
+                    "Provider-specific trigger config from the trigger schema. "
+                    "Keys are passed through to Phoenix for validation and Composio creation."
                 ),
             },
             "connected_account_id": {
@@ -166,9 +168,42 @@ DELETE_TRIGGER = {
         "properties": {
             "trigger_id": {
                 "type": "string",
-                "description": "Active trigger ID returned by create_trigger or list_triggers.",
+                "description": "Active trigger ID returned by create_trigger or get_active_triggers.",
             },
         },
         "required": ["trigger_id"],
+    },
+}
+
+GET_ACTIVE_TRIGGERS = {
+    "name": "get_active_triggers",
+    "description": (
+        "List active Phoenix-managed Composio trigger instances and their Hermes "
+        "route metadata for the current workspace."
+    ),
+    "parameters": {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "toolkit_slugs": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Optional toolkit slugs to filter.",
+            },
+            "connected_account_id": {
+                "type": "string",
+                "description": "Optional connected account ID to filter.",
+            },
+            "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Maximum active triggers to return.",
+            },
+            "cursor": {
+                "type": "string",
+                "description": "Pagination cursor returned by the backend.",
+            },
+        },
     },
 }
