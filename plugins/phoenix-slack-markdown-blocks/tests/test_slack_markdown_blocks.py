@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import os
 import sys
 import types
 import unittest
@@ -17,11 +18,17 @@ PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 
 class SlackMarkdownBlocksTests(unittest.TestCase):
     def setUp(self) -> None:
+        self._original_hermes_home = os.environ.get("HERMES_HOME")
+        os.environ.pop("HERMES_HOME", None)
         install_hermes_stubs()
         self.plugin = load_plugin_module()
         self.plugin.register(types.SimpleNamespace())
 
     def tearDown(self) -> None:
+        if self._original_hermes_home is None:
+            os.environ.pop("HERMES_HOME", None)
+        else:
+            os.environ["HERMES_HOME"] = self._original_hermes_home
         for name in list(sys.modules):
             if (
                 name == self.plugin.__name__
@@ -102,11 +109,46 @@ class SlackMarkdownBlocksTests(unittest.TestCase):
         self.assertEqual(payload["blocks"], [{"type": "markdown", "text": content}])
         self.assertNotIn("mrkdwn", payload)
 
+    def test_status_only_mode_keeps_status_without_loading_messages(self) -> None:
+        slack_module = sys.modules["gateway.platforms.slack"]
+        self.plugin.load_profile_config = lambda: {
+            "display": {"platforms": {"slack": {"assistant_status": "status_only"}}}
+        }
+        self.assertTrue(self.plugin.patch_slack_assistant_status())
+
+        adapter = slack_module.SlackAdapter()
+        asyncio.run(slack_module.SlackAdapter.send_typing(adapter, "C123", {"thread_ts": "T123"}))
+
+        self.assertEqual(
+            adapter.client.statuses,
+            [
+                {
+                    "channel_id": "C123",
+                    "thread_ts": "T123",
+                    "status": "is thinking...",
+                    "loading_messages": [],
+                }
+            ],
+        )
+
+    def test_assistant_status_off_suppresses_status(self) -> None:
+        slack_module = sys.modules["gateway.platforms.slack"]
+        self.plugin.load_profile_config = lambda: {
+            "display": {"platforms": {"slack": {"assistant_status": "off"}}}
+        }
+        self.assertTrue(self.plugin.patch_slack_assistant_status())
+
+        adapter = slack_module.SlackAdapter()
+        asyncio.run(slack_module.SlackAdapter.send_typing(adapter, "C123", {"thread_ts": "T123"}))
+
+        self.assertEqual(adapter.client.statuses, [])
+
 
 class FakeClient:
     def __init__(self) -> None:
         self.posted: list[dict[str, Any]] = []
         self.updated: list[dict[str, Any]] = []
+        self.statuses: list[dict[str, Any]] = []
 
     async def chat_postMessage(self, **kwargs: Any) -> dict[str, Any]:
         self.posted.append(kwargs)
@@ -114,6 +156,10 @@ class FakeClient:
 
     async def chat_update(self, **kwargs: Any) -> dict[str, Any]:
         self.updated.append(kwargs)
+        return {"ok": True}
+
+    async def assistant_threads_setStatus(self, **kwargs: Any) -> dict[str, Any]:
+        self.statuses.append(kwargs)
         return {"ok": True}
 
 
@@ -128,6 +174,7 @@ class FakeSlackAdapter:
         self._team_clients: dict[str, Any] = {}
         self.config = types.SimpleNamespace(extra={})
         self._bot_message_ts: set[str] = set()
+        self._active_status_threads: dict[str, str] = {}
         self.stopped_typing = False
 
     def _get_client(self, _chat_id: str) -> FakeClient:
@@ -141,6 +188,9 @@ class FakeSlackAdapter:
 
     async def stop_typing(self, _chat_id: str) -> None:
         self.stopped_typing = True
+
+    async def send_typing(self, _chat_id: str, _metadata: dict[str, Any] | None = None) -> None:
+        return None
 
     def format_message(self, content: str) -> str:
         return content.replace("**bold**", "*bold*").replace("**x**", "*x*")

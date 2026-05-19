@@ -44,10 +44,7 @@ display:
   platforms:
     slack:
       tool_progress: "off"
-      assistant_status: "off"
-
-streaming:
-  enabled: false
+      assistant_status: "status_only"
 
 onboarding:
   seen:

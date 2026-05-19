@@ -11,6 +11,7 @@ LOGGER = logging.getLogger(__name__)
 
 PATCH_MARKER = "__phoenix_slack_markdown_blocks_patched__"
 ASSISTANT_STATUS_PATCH_MARKER = "__phoenix_slack_assistant_status_patched__"
+DEFAULT_ASSISTANT_STATUS = "is thinking..."
 
 
 def register(ctx: Any) -> None:
@@ -157,7 +158,8 @@ def patch_slack_adapter() -> bool:
 
 
 def patch_slack_assistant_status() -> bool:
-    if not slack_assistant_status_disabled():
+    assistant_status = slack_assistant_status_config()
+    if assistant_status["mode"] == "default":
         return False
 
     try:
@@ -180,7 +182,36 @@ def patch_slack_assistant_status() -> bool:
         return True
 
     async def send_typing(self: Any, chat_id: str, metadata: dict[str, Any] | None = None) -> None:
-        return None
+        if assistant_status["mode"] == "off":
+            return None
+
+        if not self._app:
+            return
+
+        thread_ts = None
+        if metadata:
+            thread_ts = metadata.get("thread_id") or metadata.get("thread_ts")
+
+        if not thread_ts:
+            return
+
+        active_status_threads = getattr(self, "_active_status_threads", None)
+        if isinstance(active_status_threads, dict):
+            active_status_threads[chat_id] = thread_ts
+
+        payload = {
+            "channel_id": chat_id,
+            "thread_ts": thread_ts,
+            "status": assistant_status["status"],
+        }
+        loading_messages = assistant_status.get("loading_messages")
+        if loading_messages is not None:
+            payload["loading_messages"] = loading_messages
+
+        try:
+            await self._get_client(chat_id).assistant_threads_setStatus(**payload)
+        except Exception:
+            LOGGER.debug("[Slack] assistant.threads.setStatus failed", exc_info=True)
 
     setattr(send_typing, ASSISTANT_STATUS_PATCH_MARKER, True)
 
@@ -192,14 +223,35 @@ def patch_slack_assistant_status() -> bool:
 
 
 def slack_assistant_status_disabled() -> bool:
+    return slack_assistant_status_config()["mode"] == "off"
+
+
+def slack_assistant_status_config() -> dict[str, Any]:
     config = load_profile_config()
-    value = (
-        config.get("display", {})
-        .get("platforms", {})
-        .get("slack", {})
-        .get("assistant_status")
-    )
-    return is_off(value)
+    slack_config = config.get("display", {}).get("platforms", {}).get("slack", {})
+    value = slack_config.get("assistant_status")
+
+    if is_off(value):
+        return {"mode": "off"}
+
+    if str(value).strip().lower() in {"status_only", "footer", "footer_only"}:
+        return {
+            "mode": "status_only",
+            "status": str(slack_config.get("assistant_status_text") or DEFAULT_ASSISTANT_STATUS),
+            "loading_messages": normalize_loading_messages(
+                slack_config.get("assistant_loading_messages")
+            ),
+        }
+
+    return {"mode": "default"}
+
+
+def normalize_loading_messages(value: Any) -> list[str]:
+    if value is None or value is False:
+        return []
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return [str(value)]
 
 
 def load_profile_config() -> dict[str, Any]:
