@@ -13,6 +13,7 @@ from typing import Any
 HTTP_TIMEOUT_SECONDS = 30
 CLI_TIMEOUT_SECONDS = 60
 TOOLSET = "phoenix_trigger_subscriptions"
+SUPPORTED_DELIVERY_TARGETS = {"log", "slack"}
 
 
 @dataclass(frozen=True)
@@ -44,8 +45,22 @@ def list_triggers(args: dict[str, Any], **_: Any) -> str:
     return json_tool_response(response.data)
 
 
-def get_active_triggers(args: dict[str, Any], **_: Any) -> str:
-    response = request_json("GET", "/triggers/active", query=clean_query(args))
+def get_trigger_schema(args: dict[str, Any], **_: Any) -> str:
+    trigger_slug = read_text(args.get("trigger_slug"))
+
+    if not trigger_slug:
+        return json_tool_response(
+            {
+                "ok": False,
+                "error": "trigger_slug_required",
+                "message": "get_trigger_schema requires trigger_slug from list_triggers.",
+            }
+        )
+
+    response = request_json(
+        "GET",
+        f"/triggers/types/{quote_path(trigger_slug)}/schema",
+    )
     return json_tool_response(response.data)
 
 
@@ -56,10 +71,12 @@ def create_trigger(args: dict[str, Any], **_: Any) -> str:
         return json_tool_response(validation_error)
 
     webhook = read_mapping(args.get("webhook")) or {}
-    direct_delivery_error = validate_direct_delivery(webhook)
+    delivery_error = validate_webhook_delivery(webhook)
 
-    if direct_delivery_error:
-        return json_tool_response(direct_delivery_error)
+    if delivery_error:
+        return json_tool_response(delivery_error)
+
+    normalize_webhook_delivery(webhook)
 
     payload = {
         "trigger_slug": read_text(args.get("trigger_slug")),
@@ -260,26 +277,39 @@ def validate_create_args(args: dict[str, Any]) -> dict[str, Any] | None:
         return {
             "ok": False,
             "error": "webhook_must_be_object",
-            "message": "webhook must be an object mirroring hermes webhook subscribe options.",
+            "message": "webhook must be an object with Phoenix-supported Hermes route options.",
         }
 
     return None
 
 
-def validate_direct_delivery(webhook: dict[str, Any]) -> dict[str, Any] | None:
-    if webhook.get("deliver_only") is not True:
-        return None
-
+def validate_webhook_delivery(webhook: dict[str, Any]) -> dict[str, Any] | None:
     deliver = (read_text(webhook.get("deliver")) or "log").lower()
 
-    if deliver == "log":
+    if deliver not in SUPPORTED_DELIVERY_TARGETS:
         return {
             "ok": False,
-            "error": "deliver_only_requires_delivery_target",
-            "message": "deliver_only requires webhook.deliver to be a real target, not log.",
+            "error": "unsupported_delivery_target",
+            "message": "Phoenix trigger subscriptions support only log and slack delivery.",
+            "supported_delivery_targets": sorted(SUPPORTED_DELIVERY_TARGETS),
+        }
+
+    if webhook.get("deliver_only") is True and deliver != "slack":
+        return {
+            "ok": False,
+            "error": "deliver_only_requires_slack_delivery_target",
+            "message": "deliver_only requires webhook.deliver to be slack.",
+            "supported_delivery_targets": sorted(SUPPORTED_DELIVERY_TARGETS),
         }
 
     return None
+
+
+def normalize_webhook_delivery(webhook: dict[str, Any]) -> None:
+    deliver = read_text(webhook.get("deliver"))
+
+    if deliver:
+        webhook["deliver"] = deliver.lower()
 
 
 def request_json(
@@ -491,8 +521,6 @@ def clean_query(args: dict[str, Any]) -> dict[str, Any]:
         "toolkit_slugs",
         "connected_account_id",
         "search",
-        "limit",
-        "cursor",
     }
     return {key: value for key, value in args.items() if key in allowed}
 
