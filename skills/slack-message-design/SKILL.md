@@ -145,95 +145,37 @@ Exception: Slack mention tokens are allowed when the output is meant to be sent 
 
 Use Slack-native references when the message is intended to be posted by an app, workflow, webhook, or integration and the required IDs are available.
 
+### How to get IDs
+
+Most of the time you will not have the actual IDs needed for Slack mentions. Use Composio MCP search tool to get a tool that would allow you to find the right IDs for users, channels, and user groups.
+
 ### People
 
 If a Slack user ID is available, mention the user with the ID token:
 
-```text
-<@U12345678>
-```
+Example: <@U12345678>
 
 Use this for direct mentions in Slack-ready output. Do not use a fake ID. If the ID is not available, write the person's visible name or handle in the human draft.
 
-Good:
-
-```text
-Owner: <@U12345678>
-```
-
-Human draft when ID is unavailable:
-
-```text
-Owner: @Maya
-```
-
-Bad:
-
-```text
-Owner: U12345678
-Owner: <@USER_ID>
-```
-
 ### Channels
 
-If a Slack channel ID is available, link the channel with the channel token. Include a readable label when you know it.
+If a Slack channel ID is available, link the channel with the channel token.
 
-```text
-<#C12345678|growth>
-```
-
-If the channel name is unavailable, this is acceptable for Slack-ready output because Slack will render the channel name:
-
-```text
-<#C12345678>
-```
-
-For a human-facing draft without the ID, write the visible channel name:
-
-```text
-#growth
-```
-
-Bad:
-
-```text
-C12345678
-<#channel>
-```
+Example: <#C12345678>
 
 ### User groups / teams
 
 If a Slack user group ID is available, mention the group with the subteam token.
 
-```text
-<!subteam^S12345678|@design>
-```
-
-If the handle is unavailable, this is acceptable for Slack-ready output:
-
-```text
-<!subteam^S12345678>
-```
-
-For a human-facing draft without the ID, write the visible group handle:
-
-```text
-@design
-```
-
-Do not invent user group IDs.
+Example: <!subteam^S12345678>
 
 ### Special mentions
 
 Use broad mentions sparingly and only when the user explicitly asks or the urgency clearly justifies it.
 
-```text
-<!here>
-<!channel>
-<!everyone>
-```
+Example: `<!here>`, `<!channel>`, `<!everyone>`
 
-Prefer specific people or user groups over broad alerts.
+Strongly prefer specific people or user groups over broad alerts.
 
 ### Links
 

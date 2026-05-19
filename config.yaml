@@ -44,6 +44,9 @@ display:
     slack:
       tool_progress: "off"
 
+streaming:
+  enabled: false
+
 onboarding:
   seen:
     busy_input_prompt: true
@@ -70,8 +73,8 @@ platforms:
 memory:
   memory_enabled: true
   user_profile_enabled: true
-  memory_char_limit: 2200
-  user_char_limit: 1375
+  memory_char_limit: 3500
+  user_char_limit: 1600
 
 cron:
   wrap_response: false
