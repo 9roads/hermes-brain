@@ -12,6 +12,7 @@ LOGGER = logging.getLogger(__name__)
 PATCH_MARKER = "__phoenix_slack_markdown_blocks_patched__"
 ASSISTANT_STATUS_PATCH_MARKER = "__phoenix_slack_assistant_status_patched__"
 DEFAULT_ASSISTANT_STATUS = "is thinking..."
+QUIET_ASSISTANT_LOADING_MESSAGE = "\u200b"
 
 
 def register(ctx: Any) -> None:
@@ -208,10 +209,19 @@ def patch_slack_assistant_status() -> bool:
         if loading_messages is not None:
             payload["loading_messages"] = loading_messages
 
+        client = self._get_client(chat_id)
         try:
-            await self._get_client(chat_id).assistant_threads_setStatus(**payload)
+            await client.assistant_threads_setStatus(**payload)
         except Exception:
-            LOGGER.debug("[Slack] assistant.threads.setStatus failed", exc_info=True)
+            if "loading_messages" not in payload:
+                LOGGER.debug("[Slack] assistant.threads.setStatus failed", exc_info=True)
+                return
+            fallback_payload = dict(payload)
+            fallback_payload.pop("loading_messages", None)
+            try:
+                await client.assistant_threads_setStatus(**fallback_payload)
+            except Exception:
+                LOGGER.debug("[Slack] assistant.threads.setStatus failed", exc_info=True)
 
     setattr(send_typing, ASSISTANT_STATUS_PATCH_MARKER, True)
 
@@ -234,14 +244,22 @@ def slack_assistant_status_config() -> dict[str, Any]:
     if is_off(value):
         return {"mode": "off"}
 
-    if str(value).strip().lower() in {"status_only", "footer", "footer_only"}:
-        return {
+    mode = str(value).strip().lower()
+
+    if mode in {"status_only", "footer", "footer_only", "quiet_loading", "quiet"}:
+        assistant_status = {
             "mode": "status_only",
             "status": str(slack_config.get("assistant_status_text") or DEFAULT_ASSISTANT_STATUS),
-            "loading_messages": normalize_loading_messages(
-                slack_config.get("assistant_loading_messages")
-            ),
         }
+        if mode in {"quiet_loading", "quiet"}:
+            assistant_status["loading_messages"] = [QUIET_ASSISTANT_LOADING_MESSAGE]
+        elif "assistant_loading_messages" in slack_config:
+            loading_messages = normalize_loading_messages(
+                slack_config.get("assistant_loading_messages")
+            )
+            if loading_messages:
+                assistant_status["loading_messages"] = loading_messages
+        return assistant_status
 
     return {"mode": "default"}
 

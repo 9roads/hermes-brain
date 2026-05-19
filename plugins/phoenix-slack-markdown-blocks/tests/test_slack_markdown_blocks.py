@@ -126,8 +126,57 @@ class SlackMarkdownBlocksTests(unittest.TestCase):
                     "channel_id": "C123",
                     "thread_ts": "T123",
                     "status": "is thinking...",
-                    "loading_messages": [],
                 }
+            ],
+        )
+
+    def test_quiet_loading_mode_uses_blank_loading_message(self) -> None:
+        slack_module = sys.modules["gateway.platforms.slack"]
+        self.plugin.load_profile_config = lambda: {
+            "display": {"platforms": {"slack": {"assistant_status": "quiet_loading"}}}
+        }
+        self.assertTrue(self.plugin.patch_slack_assistant_status())
+
+        adapter = slack_module.SlackAdapter()
+        asyncio.run(slack_module.SlackAdapter.send_typing(adapter, "C123", {"thread_ts": "T123"}))
+
+        self.assertEqual(
+            adapter.client.statuses,
+            [
+                {
+                    "channel_id": "C123",
+                    "thread_ts": "T123",
+                    "status": "is thinking...",
+                    "loading_messages": ["\u200b"],
+                }
+            ],
+        )
+
+    def test_loading_message_failure_falls_back_to_status_only(self) -> None:
+        slack_module = sys.modules["gateway.platforms.slack"]
+        self.plugin.load_profile_config = lambda: {
+            "display": {"platforms": {"slack": {"assistant_status": "quiet_loading"}}}
+        }
+        self.assertTrue(self.plugin.patch_slack_assistant_status())
+
+        adapter = slack_module.SlackAdapter()
+        adapter.client.fail_status_with_loading = True
+        asyncio.run(slack_module.SlackAdapter.send_typing(adapter, "C123", {"thread_ts": "T123"}))
+
+        self.assertEqual(
+            adapter.client.statuses,
+            [
+                {
+                    "channel_id": "C123",
+                    "thread_ts": "T123",
+                    "status": "is thinking...",
+                    "loading_messages": ["\u200b"],
+                },
+                {
+                    "channel_id": "C123",
+                    "thread_ts": "T123",
+                    "status": "is thinking...",
+                },
             ],
         )
 
@@ -149,6 +198,7 @@ class FakeClient:
         self.posted: list[dict[str, Any]] = []
         self.updated: list[dict[str, Any]] = []
         self.statuses: list[dict[str, Any]] = []
+        self.fail_status_with_loading = False
 
     async def chat_postMessage(self, **kwargs: Any) -> dict[str, Any]:
         self.posted.append(kwargs)
@@ -160,6 +210,8 @@ class FakeClient:
 
     async def assistant_threads_setStatus(self, **kwargs: Any) -> dict[str, Any]:
         self.statuses.append(kwargs)
+        if self.fail_status_with_loading and "loading_messages" in kwargs:
+            raise RuntimeError("invalid_arguments")
         return {"ok": True}
 
 

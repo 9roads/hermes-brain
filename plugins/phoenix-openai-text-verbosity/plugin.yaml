@@ -1,0 +1,4 @@
+name: phoenix-openai-text-verbosity
+version: 0.1.0
+description: Phoenix compatibility patch for Responses API text verbosity.
+author: Phoenix

@@ -141,107 +141,34 @@ Use human labels instead:
 
 Exception: Slack mention tokens are allowed when the output is meant to be sent directly to Slack and the IDs are available. They may look technical in the draft, but they render as normal mentions in Slack.
 
-## Mentions, channels, groups, links, and dates
+## Mentions
 
-Use Slack-native references when the message is intended to be posted by an app, workflow, webhook, or integration and the required IDs are available.
+Use mentions when you want to reference a Slack user, channel, user group/team, or broad audience in Slack.
 
-### How to get IDs
+Before using any Slack ID token, strongly prefer exploring Slack with Composio Slack tools. Use the Composio MCP search tool to find the right Slack lookup/list/search tool, then resolve the actual user, channel, or user group ID from Slack itself. Treat this as the normal path for Slack-ready messages, not a last resort. It is especially important when a person has multiple accounts, a display name differs from their handle, a channel was renamed, or a user group name is ambiguous.
 
-Most of the time you will not have the actual IDs needed for Slack mentions. Use Composio MCP search tool to get a tool that would allow you to find the right IDs for users, channels, and user groups.
+Valid Slack-ready mention forms:
 
-### People
+- User: `<@U12345678>`
+- Channel: `<#C12345678>`
+- User group: `<!subteam^S12345678>`
+- Broad alerts: `<!here>`, `<!channel>`, `<!everyone>`
 
-If a Slack user ID is available, mention the user with the ID token:
+Use broad alerts sparingly and only when the user explicitly asks or the urgency clearly justifies it. Prefer specific people or user groups over broad alerts.
 
-Example: <@U12345678>
+Never write a plain display-name mention like `@Predrag`, `@Priya`, `@design`, or `#growth` as a substitute for a real Slack mention token. Plain names and handles may look right in a draft, but they will not reliably notify or link the intended Slack entity.
 
-Use this for direct mentions in Slack-ready output. Do not use a fake ID. If the ID is not available, write the person's visible name or handle in the human draft.
+## Links and dates
 
-### Channels
+Use Slack-native link and date references only when the message is intended to be posted by an app, workflow, webhook, or integration and the required URLs or timestamps are available.
 
-If a Slack channel ID is available, link the channel with the channel token.
-
-Example: <#C12345678>
-
-### User groups / teams
-
-If a Slack user group ID is available, mention the group with the subteam token.
-
-Example: <!subteam^S12345678>
-
-### Special mentions
-
-Use broad mentions sparingly and only when the user explicitly asks or the urgency clearly justifies it.
-
-Example: `<!here>`, `<!channel>`, `<!everyone>`
-
-Strongly prefer specific people or user groups over broad alerts.
-
-### Links
-
-Never output naked URLs in the Slack message unless the user explicitly asks for raw text.
-
-Use a display name:
-
-```text
-Details: [Launch notes]
-```
-
-For Slack-ready API/webhook text, use a labeled link when the URL is known:
-
-```text
-Details: <https://example.com/launch-notes|Launch notes>
-```
-
-If composing a human-facing draft and the URL is not needed in the visible text, use the label only:
-
-```text
-Details: Launch notes
-```
-
-Good link labels are specific:
-
-- `Launch notes`
-- `Dashboard`
-- `Customer thread`
-- `PR #482`
-- `Incident doc`
-- `Signup funnel chart`
-
-Bad:
-
-```text
-https://example.com/launch-notes
-Click here
-[link]
-```
-
-Use `[link]` only as a placeholder when the user has not provided the URL and no better label is possible.
-
-### Dates and times
-
-Use human-readable dates and times by default.
-
-Good:
-
-```text
-Need a decision by Thursday EOD.
-Next update: today at 2 PM CT.
-Launch window: May 22, 9–11 AM PT.
-```
-
-Avoid exposing raw timestamps:
-
-```text
-1779390000
-2026-05-22T16:00:00Z
-```
-
-For app-generated Slack messages where local timezone rendering matters, use Slack date syntax only when the timestamp is available, and always include a readable fallback:
-
-```text
-<!date^1779390000^{date_short} at {time}|May 21 at 2:00 PM CT>
-```
+- Links: never output naked URLs unless the user explicitly asks for raw text. Use a specific display label like `Launch notes`, `Dashboard`, `Customer thread`, `PR #482`, `Incident doc`, or `Signup funnel chart`.
+- Slack-ready links: when the URL is known, use a labeled Slack link such as `<https://example.com/launch-notes|Launch notes>`.
+- Human-facing links: when a visible URL is unnecessary, use the label only, such as `Details: Launch notes`.
+- Link placeholders: use `[link]` only when the user has not provided the URL and no better label is possible. Avoid vague labels like `Click here`.
+- Dates and times: use human-readable wording by default, such as `Thursday EOD`, `today at 2 PM CT`, or `May 22, 9-11 AM PT`.
+- Raw timestamps: do not expose values like `1779390000` or `2026-05-22T16:00:00Z` in normal drafts.
+- Slack date syntax: for app-generated Slack messages where local timezone rendering matters, use Slack date syntax only when the timestamp is available, and always include a readable fallback, such as `<!date^1779390000^{date_short} at {time}|May 21 at 2:00 PM CT>`.
 
 Do not show Slack date syntax in normal human drafts unless the user asked for Slack-ready automation text.
 
