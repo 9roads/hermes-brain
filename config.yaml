@@ -28,6 +28,7 @@ plugins:
   enabled:
     - company-memory
     - phoenix-slack-markdown-blocks
+    - phoenix-slack-thread-gate
     - phoenix-slack-home
     - phoenix-slack-surface
     - phoenix-trigger-subscriptions
@@ -38,6 +39,12 @@ plugins:
         allow_model_override: true
         allowed_models:
           - "*"
+    phoenix-slack-thread-gate:
+      model: gpt-5.4-mini
+      llm:
+        allow_model_override: true
+        allowed_models:
+          - gpt-5.4-mini
 
 display:
   busy_input_mode: steer
@@ -46,7 +53,6 @@ display:
   platforms:
     slack:
       tool_progress: "off"
-      assistant_status: "status_only"
 
 onboarding:
   seen:

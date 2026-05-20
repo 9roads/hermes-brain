@@ -2,22 +2,16 @@ from __future__ import annotations
 
 import importlib
 import logging
-import os
-from pathlib import Path
 from typing import Any
 
 
 LOGGER = logging.getLogger(__name__)
 
 PATCH_MARKER = "__phoenix_slack_markdown_blocks_patched__"
-ASSISTANT_STATUS_PATCH_MARKER = "__phoenix_slack_assistant_status_patched__"
-DEFAULT_ASSISTANT_STATUS = "is thinking..."
-QUIET_ASSISTANT_LOADING_MESSAGE = "\u200b"
 
 
 def register(ctx: Any) -> None:
     patch_slack_adapter()
-    patch_slack_assistant_status()
     patch_send_message_tool()
 
 
@@ -156,148 +150,6 @@ def patch_slack_adapter() -> bool:
     slack_adapter.send = send
     slack_adapter.edit_message = edit_message
     return True
-
-
-def patch_slack_assistant_status() -> bool:
-    assistant_status = slack_assistant_status_config()
-    if assistant_status["mode"] == "default":
-        return False
-
-    try:
-        slack_module = importlib.import_module("gateway.platforms.slack")
-    except Exception as exc:
-        LOGGER.info("Slack assistant status patch unavailable: %s", exc)
-        return False
-
-    slack_adapter = getattr(slack_module, "SlackAdapter", None)
-    if slack_adapter is None:
-        LOGGER.info("Slack assistant status patch unavailable: missing SlackAdapter")
-        return False
-
-    original_send_typing = getattr(slack_adapter, "send_typing", None)
-    if original_send_typing is None:
-        LOGGER.info("Slack assistant status patch unavailable: missing send_typing")
-        return False
-
-    if getattr(getattr(slack_adapter, "send_typing", None), ASSISTANT_STATUS_PATCH_MARKER, False):
-        return True
-
-    async def send_typing(self: Any, chat_id: str, metadata: dict[str, Any] | None = None) -> None:
-        if assistant_status["mode"] == "off":
-            return None
-
-        if not self._app:
-            return
-
-        thread_ts = None
-        if metadata:
-            thread_ts = metadata.get("thread_id") or metadata.get("thread_ts")
-
-        if not thread_ts:
-            return
-
-        active_status_threads = getattr(self, "_active_status_threads", None)
-        if isinstance(active_status_threads, dict):
-            active_status_threads[chat_id] = thread_ts
-
-        payload = {
-            "channel_id": chat_id,
-            "thread_ts": thread_ts,
-            "status": assistant_status["status"],
-        }
-        loading_messages = assistant_status.get("loading_messages")
-        if loading_messages is not None:
-            payload["loading_messages"] = loading_messages
-
-        client = self._get_client(chat_id)
-        try:
-            await client.assistant_threads_setStatus(**payload)
-        except Exception:
-            if "loading_messages" not in payload:
-                LOGGER.debug("[Slack] assistant.threads.setStatus failed", exc_info=True)
-                return
-            fallback_payload = dict(payload)
-            fallback_payload.pop("loading_messages", None)
-            try:
-                await client.assistant_threads_setStatus(**fallback_payload)
-            except Exception:
-                LOGGER.debug("[Slack] assistant.threads.setStatus failed", exc_info=True)
-
-    setattr(send_typing, ASSISTANT_STATUS_PATCH_MARKER, True)
-
-    if not hasattr(slack_adapter, "_phoenix_original_send_typing"):
-        slack_adapter._phoenix_original_send_typing = original_send_typing
-
-    slack_adapter.send_typing = send_typing
-    return True
-
-
-def slack_assistant_status_disabled() -> bool:
-    return slack_assistant_status_config()["mode"] == "off"
-
-
-def slack_assistant_status_config() -> dict[str, Any]:
-    config = load_profile_config()
-    slack_config = config.get("display", {}).get("platforms", {}).get("slack", {})
-    value = slack_config.get("assistant_status")
-
-    if is_off(value):
-        return {"mode": "off"}
-
-    mode = str(value).strip().lower()
-
-    if mode in {"status_only", "footer", "footer_only", "quiet_loading", "quiet"}:
-        assistant_status = {
-            "mode": "status_only",
-            "status": str(slack_config.get("assistant_status_text") or DEFAULT_ASSISTANT_STATUS),
-        }
-        if mode in {"quiet_loading", "quiet"}:
-            assistant_status["loading_messages"] = [QUIET_ASSISTANT_LOADING_MESSAGE]
-        elif "assistant_loading_messages" in slack_config:
-            loading_messages = normalize_loading_messages(
-                slack_config.get("assistant_loading_messages")
-            )
-            if loading_messages:
-                assistant_status["loading_messages"] = loading_messages
-        return assistant_status
-
-    return {"mode": "default"}
-
-
-def normalize_loading_messages(value: Any) -> list[str]:
-    if value is None or value is False:
-        return []
-    if isinstance(value, list):
-        return [str(item) for item in value]
-    return [str(value)]
-
-
-def load_profile_config() -> dict[str, Any]:
-    home = os.environ.get("HERMES_HOME")
-    if not home:
-        return {}
-
-    config_path = Path(home) / "config.yaml"
-    if not config_path.exists():
-        return {}
-
-    try:
-        import yaml
-
-        loaded = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-    except Exception as exc:
-        LOGGER.info("Slack assistant status config unavailable: %s", exc)
-        return {}
-
-    return loaded if isinstance(loaded, dict) else {}
-
-
-def is_off(value: Any) -> bool:
-    if value is False:
-        return True
-    if value is None:
-        return False
-    return str(value).strip().lower() in {"off", "false", "0", "no", "disabled"}
 
 
 def patch_send_message_tool() -> bool:

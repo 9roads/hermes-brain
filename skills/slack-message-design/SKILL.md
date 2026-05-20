@@ -111,12 +111,6 @@ When the user asks for a Slack message or rewrite:
 - Avoid technical implementation details unless the user specifically asks for them.
 - Make the output look like something a human teammate would post.
 
-If a necessary detail is missing:
-
-- For a human-facing draft, use readable placeholders like `[owner]`, `[deadline]`, `[Launch doc]`, or `[channel]`.
-- For Slack-ready automation text, use Slack mention/link/date syntax only when the required IDs or URLs are provided.
-- Do not fabricate Slack IDs, channel IDs, user group IDs, timestamps, links, or handles.
-
 ## Human-readable output rules
 
 The message should read like a Slack message, not a payload, template, or system log.
@@ -134,18 +128,14 @@ Do not output raw technical material unless specifically requested:
 Use human labels instead:
 
 - `Launch notes` instead of `https://...`
-- `#growth` instead of `C0123ABC` in human-facing text
-- `@design` instead of `S0123ABC` in human-facing text
 - `Thursday EOD` instead of `2026-05-21T23:59:00-05:00`
 - `tomorrow at 2 PM CT` instead of `1779390000`
-
-Exception: Slack mention tokens are allowed when the output is meant to be sent directly to Slack and the IDs are available. They may look technical in the draft, but they render as normal mentions in Slack.
 
 ## Mentions
 
 Use mentions when you want to reference a Slack user, channel, user group/team, or broad audience in Slack.
 
-Before using any Slack ID token, strongly prefer exploring Slack with Composio Slack tools. Use the Composio MCP search tool to find the right Slack lookup/list/search tool, then resolve the actual user, channel, or user group ID from Slack itself. Treat this as the normal path for Slack-ready messages, not a last resort. It is especially important when a person has multiple accounts, a display name differs from their handle, a channel was renamed, or a user group name is ambiguous.
+Before using any Slack ID token, strongly prefer exploring Slack with Composio Slack tools. Use the Composio MCP search tool (COMPOSIO_SEARCH_TOOLS) to find the right Slack lookup/list/search tool, then resolve the actual user, channel, or user group ID from Slack itself. Treat this as the normal path for Slack-ready messages, not a last resort. It is especially important when a person has multiple accounts, a display name differs from their handle, a channel was renamed, or a user group name is ambiguous.
 
 Valid Slack-ready mention forms:
 
@@ -623,8 +613,6 @@ Do not:
 - use all caps for urgency
 - bury the action at the end of a long paragraph
 - put multiple unrelated asks in one message
-- fabricate user/channel/group mentions
-- expose standalone internal IDs
 - output naked URLs
 - output Unix timestamps or raw ISO dates in normal human drafts
 - use unresolved `@here`, `@channel`, or `@everyone` unless the user explicitly asks

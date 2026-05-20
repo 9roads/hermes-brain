@@ -4,8 +4,8 @@
     "minor_version": 1
   },
   "display_information": {
-    "name": "Phoenix",
-    "description": "Phoenix company-memory agent on Slack",
+    "name": "Loisa",
+    "description": "Loisa company-memory agent on Slack",
     "background_color": "#1a1a2e"
   },
   "features": {
@@ -15,26 +15,11 @@
       "messages_tab_read_only_enabled": false
     },
     "bot_user": {
-      "display_name": "Phoenix",
+      "display_name": "Loisa",
       "always_online": true
     },
-    "slash_commands": [
-      {
-        "command": "/phoenix",
-        "description": "Ask Phoenix about this workspace",
-        "should_escape": false,
-        "url": "https://phoenix.local/slack/commands",
-        "usage_hint": "<message>"
-      },
-      {
-        "command": "/whoami",
-        "description": "Show your slash command access",
-        "should_escape": false,
-        "url": "https://phoenix.local/slack/commands"
-      }
-    ],
     "assistant_view": {
-      "assistant_description": "Chat with Phoenix in threads and DMs."
+      "assistant_description": "Chat with Loisa in threads and DMs."
     }
   },
   "oauth_config": {
@@ -49,7 +34,6 @@
         "channels:history",
         "channels:read",
         "chat:write",
-        "commands",
         "files:read",
         "files:write",
         "groups:history",
