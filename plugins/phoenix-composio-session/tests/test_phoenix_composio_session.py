@@ -5,6 +5,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import types
 import unittest
 import uuid
@@ -22,7 +23,11 @@ class PhoenixComposioSessionTests(unittest.TestCase):
             if name.startswith("phoenix_composio_session_test_"):
                 sys.modules.pop(name, None)
 
-        for name in ("COMPOSIO_TOOL_ROUTER_SESSION_ID", "COMPOSIO_MISSING_TOOL_URL_TEMPLATE"):
+        for name in (
+            "COMPOSIO_TOOL_ROUTER_SESSION_ID",
+            "COMPOSIO_MISSING_TOOL_URL_TEMPLATE",
+            "PHOENIX_COMPOSIO_SESSION_REFRESH_PATH",
+        ):
             os.environ.pop(name, None)
 
     def test_extracts_slack_context_with_and_without_user_id(self) -> None:
@@ -165,6 +170,59 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("COMPOSIO_TOOL_ROUTER_SESSION_ID: trs_retry", retried["context"])
         self.assertIsNone(repeated)
 
+    def test_refresh_marker_clears_bootstrap_cache_for_next_llm_call(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            os.environ["PHOENIX_COMPOSIO_SESSION_REFRESH_PATH"] = str(
+                Path(temp_dir) / "refresh.json"
+            )
+            plugin = load_plugin_package()
+            calls = 0
+
+            def fake_create_tool_router_session(request: Any) -> Any:
+                nonlocal calls
+                calls += 1
+                return plugin.client.BootstrapSessionResponse(
+                    composio_session_id=f"trs_session_{calls}",
+                    missing_tool_url_template="https://app.test/tools?toolkit={toolkit_slug}",
+                )
+
+            plugin.client.create_tool_router_session = fake_create_tool_router_session
+            ctx = FakePluginContext()
+            plugin.register(ctx)
+
+            first = ctx.hooks["pre_llm_call"](session_id="session-1")
+            repeated = ctx.hooks["pre_llm_call"](session_id="session-1")
+            plugin.session_refresh.write_refresh_marker("connected-account", toolkit="github")
+            refreshed = ctx.hooks["pre_llm_call"](session_id="session-1")
+            repeated_after_refresh = ctx.hooks["pre_llm_call"](session_id="session-1")
+
+            self.assertEqual(calls, 2)
+            self.assertIn("COMPOSIO_TOOL_ROUTER_SESSION_ID: trs_session_1", first["context"])
+            self.assertIsNone(repeated)
+            self.assertIn("COMPOSIO_TOOL_ROUTER_SESSION_ID: trs_session_2", refreshed["context"])
+            self.assertIsNone(repeated_after_refresh)
+            self.assertEqual(os.environ["COMPOSIO_TOOL_ROUTER_SESSION_ID"], "trs_session_2")
+
+    def test_invalid_refresh_marker_does_not_block_bootstrap(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            marker = Path(temp_dir) / "refresh.json"
+            marker.write_text("{not-json", encoding="utf-8")
+            os.environ["PHOENIX_COMPOSIO_SESSION_REFRESH_PATH"] = str(marker)
+            plugin = load_plugin_package()
+
+            plugin.client.create_tool_router_session = lambda _request: (
+                plugin.client.BootstrapSessionResponse(
+                    composio_session_id="trs_invalid_marker",
+                    missing_tool_url_template="https://app.test/tools?toolkit={toolkit_slug}",
+                )
+            )
+            ctx = FakePluginContext()
+            plugin.register(ctx)
+
+            injected = ctx.hooks["pre_llm_call"](session_id="session-1")
+
+            self.assertIn("COMPOSIO_TOOL_ROUTER_SESSION_ID: trs_invalid_marker", injected["context"])
+
     def test_composio_cli_skill_examples_always_include_session_id(self) -> None:
         content = (HERMES_ROOT / "skills" / "composio-cli" / "SKILL.md").read_text(
             encoding="utf-8"
@@ -197,6 +255,8 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("COMPOSIO_API_KEY", plugin_yaml)
         self.assertIn('shutil.which("composio")', healthcheck)
         self.assertIn("COMPOSIO_API_KEY", healthcheck)
+        self.assertIn("PHOENIX_BACKEND_URL", healthcheck)
+        self.assertIn("PHOENIX_HERMES_PLUGIN_TOKEN", healthcheck)
         self.assertIn("Composio Slackbot tools are allowed", soul)
         self.assertNotIn("Do not use Composio `slack` tools", soul)
 

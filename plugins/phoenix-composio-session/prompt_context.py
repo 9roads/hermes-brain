@@ -18,6 +18,11 @@ def apply_session_environment(response: BootstrapSessionResponse) -> None:
     os.environ[MISSING_URL_TEMPLATE_ENV] = response.missing_tool_url_template
 
 
+def clear_session_environment() -> None:
+    os.environ.pop(SESSION_ID_ENV, None)
+    os.environ.pop(MISSING_URL_TEMPLATE_ENV, None)
+
+
 def build_prompt_context(response: BootstrapSessionResponse) -> str:
     return "\n".join(
         [

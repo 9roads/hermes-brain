@@ -66,10 +66,11 @@ if missing_wiki_files:
     )
     sys.exit(1)
 
-# 4. Composio Tool Router CLI runtime
-if not os.environ.get("COMPOSIO_API_KEY", "").strip():
-    print("COMPOSIO_API_KEY missing from Hermes runtime env", file=sys.stderr)
-    sys.exit(1)
+# 4. Phoenix Composio Tool Router runtime
+for name in ("COMPOSIO_API_KEY", "PHOENIX_BACKEND_URL", "PHOENIX_HERMES_PLUGIN_TOKEN"):
+    if not os.environ.get(name, "").strip():
+        print(f"{name} missing from Hermes runtime env", file=sys.stderr)
+        sys.exit(1)
 
 if not shutil.which("composio"):
     print("composio CLI is not available on PATH", file=sys.stderr)
