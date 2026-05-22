@@ -1,0 +1,6 @@
+name: phoenix-tool-gateway
+version: 0.1.0
+description: Phoenix-managed Tool Gateway auth for injected runtime tokens.
+author: Phoenix
+requires_env:
+  - TOOL_GATEWAY_USER_TOKEN

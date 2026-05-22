@@ -25,6 +25,8 @@ auxiliary:
 plugins:
   enabled:
     - company-memory
+    - phoenix-tool-gateway
+    - web-firecrawl
     - phoenix-composio-session
     - phoenix-slack-markdown-blocks
     - phoenix-slack-thread-gate
