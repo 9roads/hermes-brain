@@ -4,7 +4,16 @@ This directory is the Phoenix-owned Hermes profile distribution source. It is in
 
 Edit static agent behavior here: `SOUL.md`, `config.yaml`, `skills/`, `plugins/`, `cron/`, and `scripts/`. Runtime state does not belong here.
 
-Hermes reads MCP servers from `config.yaml` under `mcp_servers`; Phoenix should not add MCP servers to an installed sandbox at runtime.
+Hermes reads MCP servers from `config.yaml` under `mcp_servers`; Phoenix should not add MCP servers to an installed sandbox at runtime. This profile intentionally does not configure a static Composio MCP server. Composio access is bootstrapped per Hermes session by `plugins/phoenix-composio-session` and used through the `composio-cli` skill.
+
+Required Phoenix runtime env for Composio session bootstrapping:
+
+- `PHOENIX_BACKEND_URL`
+- `PHOENIX_WORKSPACE_ID`
+- `PHOENIX_HERMES_PLUGIN_TOKEN`
+- `COMPOSIO_API_KEY`
+
+Phoenix installs pinned `loisa-composio-cli` into each Hermes sandbox and exposes `composio` on `PATH`.
 
 Reference docs:
 

@@ -9,7 +9,7 @@ The bundled `llm-wiki` skill is disabled for this profile. Use this company-memo
 5. Search Markdown files under the wiki when `index.md` may be incomplete.
 6. Use `team/` for work-relevant people and teams; use `entities/` for broad cross-references across people, teams, customers, vendors, tools, products, repos, and systems.
 7. Use compact wiki page references instead of pasted source excerpts.
-8. Use Composio MCP live reads only when the user asks for current state, the wiki is stale or contested, the answer depends on a source object, or answering from the wiki would be a guess.
+8. Use the `composio-cli` skill with the injected Tool Router session for live reads only when the user asks for current state, the wiki is stale or contested, the answer depends on a source object, or answering from the wiki would be a guess.
 9. Treat `raw/` as immutable source-receipt space. Do not edit raw receipts except when this plugin creates a session-summary receipt.
 10. Do not copy raw provider content, full threads, long documents, emails, issue bodies, secrets, preview URLs, `.env`, `auth.json`, or bearer tokens into responses or wiki pages.
 11. Do not store private personal details, protected traits, compensation, gossip, psychological labels, or performance criticism.

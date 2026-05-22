@@ -135,7 +135,7 @@ Use human labels instead:
 
 Use mentions when you want to reference a Slack user, channel, user group/team, or broad audience in Slack.
 
-Before using any Slack ID token, strongly prefer exploring Slack with Composio Slack tools. Use the Composio MCP search tool (COMPOSIO_SEARCH_TOOLS) to find the right Slack lookup/list/search tool, then resolve the actual user, channel, or user group ID from Slack itself. Treat this as the normal path for Slack-ready messages, not a last resort. It is especially important when a person has multiple accounts, a display name differs from their handle, a channel was renamed, or a user group name is ambiguous.
+Before using any Slack ID token, prefer the native Hermes Slack context already attached to the current message, user-provided canonical mention tokens, or another Phoenix-provided Slack lookup surface when available. Do not resolve Slack IDs through Composio `slack` tools; that toolkit is disabled for Hermes tool use. If an exact Slack entity cannot be resolved safely, ask for the canonical mention or link before drafting a mention-heavy message.
 
 Valid Slack-ready mention forms:
 

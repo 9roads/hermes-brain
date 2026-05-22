@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import shutil
 import sys
 import urllib.request
 
@@ -63,6 +64,15 @@ if missing_wiki_files:
         f"wiki scaffold missing under {wiki_root}: {', '.join(missing_wiki_files)}",
         file=sys.stderr,
     )
+    sys.exit(1)
+
+# 4. Composio Tool Router CLI runtime
+if not os.environ.get("COMPOSIO_API_KEY", "").strip():
+    print("COMPOSIO_API_KEY missing from Hermes runtime env", file=sys.stderr)
+    sys.exit(1)
+
+if not shutil.which("composio"):
+    print("composio CLI is not available on PATH", file=sys.stderr)
     sys.exit(1)
 
 print("ok")

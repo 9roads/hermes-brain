@@ -10,13 +10,6 @@ approvals:
 terminal:
   cwd: /opt/data/workspace
 
-mcp_servers:
-  composio:
-    url: ${COMPOSIO_MCP_URL}
-    headers:
-      x-api-key: ${COMPOSIO_MCP_HEADER_X_API_KEY}
-    enabled: true
-
 agent:
   max_turns: 90
   gateway_notify_interval: 0
@@ -27,6 +20,7 @@ agent:
 plugins:
   enabled:
     - company-memory
+    - phoenix-composio-session
     - phoenix-slack-markdown-blocks
     - phoenix-slack-thread-gate
     - phoenix-slack-home

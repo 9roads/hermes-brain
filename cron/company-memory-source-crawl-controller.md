@@ -1,12 +1,12 @@
 Task: company-memory source crawl controller.
 
-Use the `company-memory` skill, Composio MCP, and the adaptive policy emitted by the pre-check script.
+Use the `company-memory` and `composio-cli` skills, the injected Composio Tool Router session, and the adaptive policy emitted by the pre-check script.
 
 Goal: discover recent, interesting, or patterned company-tool activity and write safe raw ingestion artifacts to the configured wiki root's `raw/runs/` for later wiki processing.
 
 Rules:
 
-- Use Composio MCP and remote workbench capabilities for connected company tools.
+- Use the Composio CLI with the injected Tool Router session for connected company tools.
 - Discover connected toolkits and available read/list/search/detail tools.
 - Classify tools before use. Use only read-only tools by default.
 - Reject mutating actions matching send, create, update, delete, archive, label, invite, post, react, share, approve, or permission changes unless a future explicit user-approved feature allows them.

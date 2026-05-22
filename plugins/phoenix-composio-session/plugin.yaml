@@ -1,0 +1,12 @@
+name: phoenix-composio-session
+version: 0.1.0
+description: Phoenix backend bootstrap for per-session Composio Tool Router access.
+author: Phoenix
+provides_hooks:
+  - pre_gateway_dispatch
+  - pre_llm_call
+requires_env:
+  - PHOENIX_BACKEND_URL
+  - PHOENIX_WORKSPACE_ID
+  - PHOENIX_HERMES_PLUGIN_TOKEN
+  - COMPOSIO_API_KEY
