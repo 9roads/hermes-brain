@@ -123,6 +123,8 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("Composio Tool Router session:", injected["context"])
         self.assertIn("COMPOSIO_TOOL_ROUTER_SESSION_ID line", injected["context"])
         self.assertIn("must pass --session-id trs_session", injected["context"])
+        self.assertIn("Composio Slackbot tools are allowed", injected["context"])
+        self.assertIn("reactions", injected["context"])
 
     def test_missing_tool_url_slug_replacement_is_url_safe(self) -> None:
         plugin = load_plugin_package()
@@ -134,6 +136,35 @@ class PhoenixComposioSessionTests(unittest.TestCase):
 
         self.assertEqual(url, "https://app.test/tools?toolkit=google_calendar&connect=1")
 
+    def test_failed_bootstrap_is_retried_for_same_session(self) -> None:
+        plugin = load_plugin_package()
+        calls = 0
+
+        def flaky_create_tool_router_session(request: Any) -> Any:
+            nonlocal calls
+            calls += 1
+
+            if calls == 1:
+                raise RuntimeError("temporary failure")
+
+            return plugin.client.BootstrapSessionResponse(
+                composio_session_id="trs_retry",
+                missing_tool_url_template="https://app.test/tools?toolkit={toolkit_slug}",
+            )
+
+        plugin.client.create_tool_router_session = flaky_create_tool_router_session
+        ctx = FakePluginContext()
+        plugin.register(ctx)
+
+        failed = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
+        retried = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
+        repeated = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
+
+        self.assertEqual(calls, 2)
+        self.assertIn("could not be created", failed["context"])
+        self.assertIn("COMPOSIO_TOOL_ROUTER_SESSION_ID: trs_retry", retried["context"])
+        self.assertIsNone(repeated)
+
     def test_composio_cli_skill_examples_always_include_session_id(self) -> None:
         content = (HERMES_ROOT / "skills" / "composio-cli" / "SKILL.md").read_text(
             encoding="utf-8"
@@ -143,6 +174,9 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("COMPOSIO_API_KEY", content)
         self.assertIn("Composio Tool Router session:", content)
         self.assertIn("COMPOSIO_TOOL_ROUTER_SESSION_ID:", content)
+        self.assertIn("Composio Slackbot tools are allowed", content)
+        self.assertIn("--toolkits slackbot", content)
+        self.assertNotIn("Do not use Composio `slack` tools", content)
         self.assertGreaterEqual(len(command_blocks), 3)
 
         for block in command_blocks:
@@ -163,8 +197,8 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("COMPOSIO_API_KEY", plugin_yaml)
         self.assertIn('shutil.which("composio")', healthcheck)
         self.assertIn("COMPOSIO_API_KEY", healthcheck)
-        self.assertIn("Do not use Composio `slack` tools", soul)
-        self.assertIn("Slackbot remains", soul)
+        self.assertIn("Composio Slackbot tools are allowed", soul)
+        self.assertNotIn("Do not use Composio `slack` tools", soul)
 
 
 class FakePluginContext:

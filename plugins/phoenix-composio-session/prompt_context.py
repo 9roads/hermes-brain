@@ -35,8 +35,10 @@ def build_prompt_context(response: BootstrapSessionResponse) -> str:
                 "template and show that URL."
             ),
             (
-                "- Native Hermes Slack handles Slack messages and replies. Do not use "
-                "Composio slack tools; Slackbot remains the workspace runtime/auth connection."
+                "- Composio Slackbot tools are allowed for Slack API actions. Use native "
+                "Hermes Slack for ordinary current-thread replies, and use composio-cli "
+                "with the slackbot toolkit for requested Slack actions such as reactions, "
+                "search/history, user/channel metadata, pins, and channel admin."
             ),
         ]
     )

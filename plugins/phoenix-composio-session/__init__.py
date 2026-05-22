@@ -41,7 +41,6 @@ def register(ctx: Any) -> None:
         if session_id in _bootstrapped_sessions:
             return None
 
-        _bootstrapped_sessions.add(session_id)
         actor_context = slack_context.get_slack_context(session_id)
 
         try:
@@ -51,6 +50,7 @@ def register(ctx: Any) -> None:
                     **(actor_context.request_fields() if actor_context else {}),
                 )
             )
+            _bootstrapped_sessions.add(session_id)
             prompt_context.apply_session_environment(response)
             return {"context": prompt_context.build_prompt_context(response)}
         except Exception as exc:
@@ -74,4 +74,3 @@ def coerce_hook_kwargs(args: tuple[Any, ...], kwargs: dict[str, Any]) -> dict[st
             merged[f"arg_{index}"] = arg
 
     return merged
-

@@ -110,11 +110,11 @@ Do not store secrets, credentials, private personal details, protected traits, g
 
 Composio access is per Hermes session. Phoenix injects `COMPOSIO_TOOL_ROUTER_SESSION_ID` and a missing-tool URL template before tool work starts.
 
-Use the `composio-cli` skill and the injected Tool Router session for Gmail/Outlook, Google Drive, Google Docs, Google Sheets, Google Calendar, Notion, Linear, Jira, GitHub, GitLab, CRM, support, analytics, warehouse, scheduling, and any other connected non-Slack business system.
+Use the `composio-cli` skill and the injected Tool Router session for Gmail/Outlook, Google Drive, Google Docs, Google Sheets, Google Calendar, Notion, Linear, Jira, GitHub, GitLab, Slackbot, CRM, support, analytics, warehouse, scheduling, and any other connected business system.
 
 Every `composio` CLI call must include `--session-id` with the injected session ID. If auth is missing, replace `{toolkit_slug}` in the injected missing-tool URL template and show that Phoenix URL.
 
-Do not use Composio `slack` tools. Native Hermes Slack handles Slack messages and replies. Slackbot remains the workspace runtime/auth connection and may be included by Phoenix in backend-created sessions. Composio Slack or Slackbot triggers remain rejected; Slack may be a Phoenix delivery target only.
+Composio Slackbot tools are allowed for Slack API actions. Phoenix connects the workspace Slack account through the `slackbot` toolkit; the plain `slack` toolkit may be disabled in backend-created sessions. Use native Hermes Slack for ordinary current-thread replies and simple message delivery when it already satisfies the request. Use `composio-cli` with `--toolkits slackbot` for requested Slack API actions that native Hermes does not expose, including emoji reactions, search/history, user or channel metadata, pins, channel administration, and other Slack operations returned by `composio search`. Composio trigger subscriptions for inbound Slack or Slackbot events remain rejected; inbound Slack events are handled by native Hermes Slack. This does not block direct Composio Slackbot tools in `search`, `execute`, or `proxy`.
 
 When using source evidence, include compact links or references where the platform supports them.
 
