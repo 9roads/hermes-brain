@@ -68,6 +68,8 @@ if missing_wiki_files:
 
 # 4. Phoenix Composio Tool Router runtime
 for name in (
+    "BROWSERBASE_API_KEY",
+    "BROWSERBASE_PROJECT_ID",
     "COMPOSIO_API_KEY",
     "PHOENIX_BACKEND_URL",
     "PHOENIX_HERMES_PLUGIN_TOKEN",

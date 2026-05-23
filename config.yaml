@@ -199,4 +199,4 @@ tts:
     voice: alloy
 
 browser:
-  cloud_provider: browser-use
+  cloud_provider: browserbase
