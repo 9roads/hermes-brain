@@ -25,8 +25,6 @@ auxiliary:
 plugins:
   enabled:
     - company-memory
-    - phoenix-tool-gateway
-    - web-firecrawl
     - phoenix-composio-session
     - phoenix-slack-markdown-blocks
     - phoenix-slack-thread-gate
@@ -97,8 +95,91 @@ tool_output:
 
 skills:
   disabled:
-    - llm-wiki
+    - apple-notes
+    - apple-reminders
+    - findmy
+    - imessage
+    - macos-computer-use
+    - claude-code
+    - codex
+    - opencode
+    - architecture-diagram
+    - ascii-art
+    - ascii-video
+    - baoyu-article-illustrator
+    - baoyu-comic
+    - baoyu-infographic
+    - claude-design
+    - comfyui
+    - creative-ideation
+    - design-md
+    - excalidraw
+    - humanizer
+    - manim-video
+    - p5js
+    - pixel-art
+    - popular-web-designs
+    - pretext
+    - sketch
+    - songwriting-and-ai-music
+    - touchdesigner-mcp
+    - jupyter-live-kernel
     - webhook-subscriptions
+    - dogfood
+    - himalaya
+    - minecraft-modpack-server
+    - pokemon-player
+    - codebase-inspection
+    - github-auth
+    - github-code-review
+    - github-issues
+    - github-pr-workflow
+    - github-repo-management
+    - native-mcp
+    - gif-search
+    - heartmula
+    - songsee
+    - spotify
+    - youtube-content
+    - audiocraft-audio-generation
+    - dspy
+    - huggingface-hub
+    - llama-cpp
+    - evaluating-llms-harness
+    - obliteratus
+    - segment-anything-model
+    - serving-llms-vllm
+    - weights-and-biases
+    - obsidian
+    - airtable
+    - google-workspace
+    - linear
+    - maps
+    - nano-pdf
+    - notion
+    - ocr-and-documents
+    - powerpoint
+    - teams-meeting-pipeline
+    - godmode
+    - arxiv
+    - blogwatcher
+    - llm-wiki
+    - polymarket
+    - research-paper-writing
+    - openhue
+    - xurl
+    - debugging-hermes-tui-commands
+    - hermes-agent-skill-authoring
+    - node-inspect-debugger
+    - plan
+    - python-debugpy
+    - requesting-code-review
+    - spike
+    - subagent-driven-development
+    - systematic-debugging
+    - test-driven-development
+    - writing-plans
+    - yuanbao
   config:
     company_memory:
       wiki_root: ${COMPANY_MEMORY_WIKI_ROOT}
@@ -106,20 +187,16 @@ skills:
       workspace_name: ${PHOENIX_WORKSPACE_NAME}
 
 web:
-  backend: firecrawl
-  use_gateway: true
+  backend: "tavily"
 
 image_gen:
   model: fal-ai/flux-2/klein/9b
-  use_gateway: true
 
 tts:
   provider: openai
-  use_gateway: true
   openai:
     model: gpt-4o-mini-tts
     voice: alloy
 
 browser:
   cloud_provider: browser-use
-  use_gateway: true

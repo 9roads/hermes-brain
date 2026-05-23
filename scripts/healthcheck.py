@@ -67,7 +67,12 @@ if missing_wiki_files:
     sys.exit(1)
 
 # 4. Phoenix Composio Tool Router runtime
-for name in ("COMPOSIO_API_KEY", "PHOENIX_BACKEND_URL", "PHOENIX_HERMES_PLUGIN_TOKEN"):
+for name in (
+    "COMPOSIO_API_KEY",
+    "PHOENIX_BACKEND_URL",
+    "PHOENIX_HERMES_PLUGIN_TOKEN",
+    "TAVILY_API_KEY",
+):
     if not os.environ.get(name, "").strip():
         print(f"{name} missing from Hermes runtime env", file=sys.stderr)
         sys.exit(1)
