@@ -1,0 +1,172 @@
+memory_type: company_page
+
+description: |
+  Flexible company memory page.
+
+  Use this when durable company knowledge is useful long-term but does not fit company_profile,
+  company_person, company_team, company_project, or company_decision.
+
+  This schema is intentionally flexible, but paths are controlled to exactly one section
+  and one page file: pages/<section_slug>/<page_slug>.md.
+
+  Default sections:
+  - strategy
+  - product
+  - customers
+  - sales
+  - marketing
+  - operations
+  - engineering
+  - finance
+  - legal
+  - hiring
+  - glossary
+  - risks
+  - vendors
+  - metrics
+  - raw_notes
+
+  Create a new top-level section only when none of the default sections fit clearly.
+
+  Bad uses:
+  - user preferences
+  - tool usage memories
+  - assistant behavior instructions
+  - generic world knowledge
+  - private personal facts
+  - raw chat logs without durable company value
+
+directory: "viking://user/{{ user_space }}/memories/pages/{{ section_slug }}"
+filename_template: "{{ page_slug }}.md"
+enabled: true
+operation_mode: "upsert"
+
+overview_template: |-
+  # Company Pages
+  {% for item in items %}
+  - [{{ item.file_content.title|default(item.file_content.page_slug, true) }}](./{{ item.file_name }})
+    - type: {{ item.file_content.page_type|default("unknown", true) }};
+    owner: {{ item.file_content.owner_slug|default("unknown", true) }}
+  {% endfor %}
+
+content_template: |-
+  # {{ title|default(page_slug, true) }}
+
+  ## Basic info
+  - Section: {{ section_slug|default("unknown", true) }}
+  - Page: {{ page_slug|default("unknown", true) }}
+  - Type: {{ page_type|default("unknown", true) }}
+  - Owner: {{ owner_slug|default("unknown", true) }}
+  - Related teams: {{ related_teams|default("unknown", true) }}
+  - Related people: {{ related_people|default("unknown", true) }}
+  - Last observed: {{ last_observed|default("unknown", true) }}
+  - Confidence: {{ confidence|default("medium", true) }}
+
+  ## Summary
+  {{ summary|default("Unknown.", true) }}
+
+  ## Details
+  {{ details|default("Unknown.", true) }}
+
+  ## Current state
+  {{ current_state|default("Unknown.", true) }}
+
+  ## Open questions / risks
+  {{ open_questions_risks|default("None recorded.", true) }}
+
+  ## Related references
+  {{ related_refs|default("None recorded.", true) }}
+
+  ## Custom properties
+  {{ custom_properties|default("None recorded.", true) }}
+
+  ## Custom sections
+  {{ custom_sections|default("None recorded.", true) }}
+
+  ## Evidence
+  {{ evidence|default("Source metadata not available.", true) }}
+
+fields:
+  - name: section_slug
+    type: string
+    description: "Top-level page section. Prefer the default section list."
+    merge_op: immutable
+    searchable: true
+  - name: page_slug
+    type: string
+    description: "Single page slug. Must not contain slashes."
+    merge_op: immutable
+    searchable: true
+  - name: title
+    type: string
+    description: "Human-readable page title."
+    merge_op: patch
+    searchable: true
+  - name: page_type
+    type: string
+    description: "SOP, customer, glossary, risk, policy, system, note, or other page type."
+    merge_op: patch
+    searchable: true
+  - name: owner_slug
+    type: string
+    description: "Owner when explicitly known."
+    merge_op: patch
+    searchable: true
+  - name: related_teams
+    type: string
+    description: "Related team slugs."
+    merge_op: patch
+    searchable: true
+  - name: related_people
+    type: string
+    description: "Related person slugs."
+    merge_op: patch
+    searchable: true
+  - name: summary
+    type: string
+    description: "Short summary."
+    merge_op: patch
+    searchable: true
+  - name: details
+    type: string
+    description: "Detailed durable company knowledge."
+    merge_op: patch
+    searchable: true
+  - name: current_state
+    type: string
+    description: "Current state when applicable."
+    merge_op: patch
+    searchable: true
+  - name: open_questions_risks
+    type: string
+    description: "Open questions, risks, or uncertainty."
+    merge_op: patch
+    searchable: true
+  - name: related_refs
+    type: string
+    description: "Related resource URIs, decisions, projects, or pages."
+    merge_op: patch
+    searchable: true
+  - name: confidence
+    type: string
+    description: "low, medium, or high."
+    merge_op: patch
+  - name: last_observed
+    type: string
+    description: "Most recent observation date."
+    merge_op: patch
+  - name: custom_properties
+    type: string
+    description: "YAML-like key/value properties for durable company facts that belong to this memory but do not fit predefined fields."
+    merge_op: patch
+    searchable: true
+  - name: custom_sections
+    type: string
+    description: "Markdown sections for durable company knowledge that belongs to this memory but does not fit predefined fields."
+    merge_op: patch
+    searchable: true
+  - name: evidence
+    type: string
+    description: "Source metadata present in the input. Do not fabricate exact sources."
+    merge_op: patch
+    searchable: true

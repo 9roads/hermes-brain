@@ -6,13 +6,15 @@ import sys
 import urllib.request
 
 DEFAULT_HERMES_HOME = "/opt/data/profiles/phoenix"
-DEFAULT_WIKI_ROOT = "/opt/data/workspace/wiki"
 
 api_key = os.environ.get("API_SERVER_KEY")
 port = os.environ.get("API_SERVER_PORT", "8642")
 home = os.environ.get("HERMES_HOME", DEFAULT_HERMES_HOME)
 state_path = os.path.join(home, "gateway_state.json")
-wiki_root = os.environ.get("COMPANY_MEMORY_WIKI_ROOT") or DEFAULT_WIKI_ROOT
+openviking_endpoint = (
+    os.environ.get("OPENVIKING_ENDPOINT") or "http://127.0.0.1:1933"
+).strip().rstrip("/")
+openviking_config_file = os.environ.get("OPENVIKING_CONFIG_FILE", "/opt/data/openviking/ov.conf")
 
 # 1. API health
 headers = {}
@@ -53,17 +55,27 @@ if bad_platforms:
     print(f"bad platforms: {bad_platforms}", file=sys.stderr)
     sys.exit(1)
 
-# 3. Company-memory wiki scaffold
-required_wiki_files = ("SCHEMA.md", "index.md", "current-state.md")
-missing_wiki_files = [
-    name for name in required_wiki_files if not os.path.isfile(os.path.join(wiki_root, name))
-]
+# 3. Company memory backend
+if not os.path.isfile(openviking_config_file):
+    print(f"openviking config missing: {openviking_config_file}", file=sys.stderr)
+    sys.exit(1)
 
-if missing_wiki_files:
-    print(
-        f"wiki scaffold missing under {wiki_root}: {', '.join(missing_wiki_files)}",
-        file=sys.stderr,
-    )
+openviking_ok = False
+last_error = ""
+
+for health_path in ("/health", "/ready"):
+    try:
+        with urllib.request.urlopen(f"{openviking_endpoint}{health_path}", timeout=3) as r:
+            data = json.loads(r.read().decode())
+        if data.get("status") in {"ok", "ready"} or data.get("healthy") is True:
+            openviking_ok = True
+            break
+        last_error = f"bad {health_path}: {data}"
+    except Exception as e:
+        last_error = str(e)
+
+if not openviking_ok:
+    print(f"openviking unhealthy at {openviking_endpoint}: {last_error}", file=sys.stderr)
     sys.exit(1)
 
 # 4. Phoenix Composio Tool Router runtime

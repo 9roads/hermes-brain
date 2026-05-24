@@ -1,0 +1,26 @@
+memory_type: preferences
+
+description: |
+  Disabled built-in user preferences memory.
+
+  Hermes owns user preferences and assistant behavior preferences. OpenViking is
+  reserved for shared company memory.
+
+directory: "viking://user/{{ user_space }}/memories/preferences"
+filename_template: "{{ user }}/{{ topic }}.md"
+enabled: false
+operation_mode: "upsert"
+
+fields:
+  - name: user
+    type: string
+    description: "Disabled built-in preference owner."
+    merge_op: immutable
+  - name: topic
+    type: string
+    description: "Disabled built-in preference topic."
+    merge_op: immutable
+  - name: content
+    type: string
+    description: "Disabled built-in preference content."
+    merge_op: patch

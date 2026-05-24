@@ -1,0 +1,26 @@
+memory_type: entities
+
+description: |
+  Disabled built-in user entities memory.
+
+  Shared company entities are represented by company_person, company_team,
+  company_project, company_decision, company_profile, and company_page.
+
+directory: "viking://user/{{ user_space }}/memories/entities"
+filename_template: "{{ category }}/{{ name }}.md"
+enabled: false
+operation_mode: "upsert"
+
+fields:
+  - name: category
+    type: string
+    description: "Disabled built-in entity category."
+    merge_op: immutable
+  - name: name
+    type: string
+    description: "Disabled built-in entity name."
+    merge_op: immutable
+  - name: content
+    type: string
+    description: "Disabled built-in entity content."
+    merge_op: patch

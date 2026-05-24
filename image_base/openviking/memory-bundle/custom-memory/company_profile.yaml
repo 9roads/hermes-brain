@@ -1,0 +1,124 @@
+memory_type: company_profile
+
+description: |
+  Canonical company profile memory.
+
+  Use this for stable company-level facts:
+  - company name, aliases, market, business model
+  - mission, positioning, ICP, products/services
+  - stage, current priorities, operating principles
+  - high-level org shape
+  - important caveats or uncertainty
+
+  Use custom_properties/custom_sections only for durable company-level facts that do not fit the predefined fields.
+
+  Do not store user preferences, assistant behavior preferences, tool usage tips, or private personal facts.
+
+directory: "viking://user/{{ user_space }}/memories"
+filename_template: "profile.md"
+enabled: true
+operation_mode: "upsert"
+
+overview_template: |-
+  # Company Profile
+  {% for item in items %}
+  - {{ item.file_content.company_name|default("Company", true) }}: {{ item.file_content.short_description|default("No description", true) }}
+  {% endfor %}
+
+content_template: |-
+  # {{ company_name|default("Company Profile", true) }}
+
+  ## Short description
+  {{ short_description|default("Unknown.", true) }}
+
+  ## Mission / purpose
+  {{ mission|default("Unknown.", true) }}
+
+  ## Market / ICP
+  {{ market_icp|default("Unknown.", true) }}
+
+  ## Products / services
+  {{ products_services|default("Unknown.", true) }}
+
+  ## Business model
+  {{ business_model|default("Unknown.", true) }}
+
+  ## Current priorities
+  {{ current_priorities|default("Unknown.", true) }}
+
+  ## Operating principles
+  {{ operating_principles|default("Unknown.", true) }}
+
+  ## Known constraints / caveats
+  {{ constraints|default("Unknown.", true) }}
+
+  ## Custom properties
+  {{ custom_properties|default("None recorded.", true) }}
+
+  ## Custom sections
+  {{ custom_sections|default("None recorded.", true) }}
+
+  ## Evidence
+  {{ evidence|default("Source metadata not available.", true) }}
+
+fields:
+  - name: company_name
+    type: string
+    description: "Canonical company name. Use the clearest explicit name."
+    merge_op: patch
+    searchable: true
+  - name: short_description
+    type: string
+    description: "One-paragraph company description."
+    merge_op: patch
+    searchable: true
+  - name: mission
+    type: string
+    description: "Company mission or purpose."
+    merge_op: patch
+    searchable: true
+  - name: market_icp
+    type: string
+    description: "Market, ICP, segments, and positioning."
+    merge_op: patch
+    searchable: true
+  - name: products_services
+    type: string
+    description: "Products and services."
+    merge_op: patch
+    searchable: true
+  - name: business_model
+    type: string
+    description: "How the company makes money."
+    merge_op: patch
+    searchable: true
+  - name: current_priorities
+    type: string
+    description: "Current durable priorities."
+    merge_op: patch
+    searchable: true
+  - name: operating_principles
+    type: string
+    description: "Stable operating principles, cultural norms, and company rules."
+    merge_op: patch
+    searchable: true
+  - name: constraints
+    type: string
+    description: "Known constraints, caveats, and uncertainty."
+    merge_op: patch
+    searchable: true
+  - name: custom_properties
+    type: string
+    description: "YAML-like key/value properties for durable company facts that belong to this memory but do not fit predefined fields."
+    merge_op: patch
+    searchable: true
+  - name: custom_sections
+    type: string
+    description: "Markdown sections for durable company knowledge that belongs to this memory but does not fit predefined fields."
+    merge_op: patch
+    searchable: true
+  - name: evidence
+    type: string
+    description: "Source metadata present in the input. Do not fabricate exact sources."
+    merge_op: patch
+    searchable: true

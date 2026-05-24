@@ -24,7 +24,6 @@ auxiliary:
 
 plugins:
   enabled:
-    - company-memory
     - phoenix-composio-session
     - phoenix-slack-markdown-blocks
     - phoenix-slack-thread-gate
@@ -33,11 +32,6 @@ plugins:
     - phoenix-trigger-subscriptions
     - phoenix-openai-text-verbosity
   entries:
-    company-memory:
-      llm:
-        allow_model_override: true
-        allowed_models:
-          - "*"
     phoenix-slack-thread-gate:
       model: gpt-5.4-mini
       llm:
@@ -77,10 +71,11 @@ platforms:
         - phoenix
 
 memory:
+  provider: openviking_memory
   memory_enabled: true
   user_profile_enabled: true
-  memory_char_limit: 3500
-  user_char_limit: 1600
+  memory_char_limit: 2000
+  user_char_limit: 1375
 
 cron:
   wrap_response: false
@@ -180,11 +175,6 @@ skills:
     - test-driven-development
     - writing-plans
     - yuanbao
-  config:
-    company_memory:
-      wiki_root: ${COMPANY_MEMORY_WIKI_ROOT}
-      workspace_id: ${PHOENIX_WORKSPACE_ID}
-      workspace_name: ${PHOENIX_WORKSPACE_NAME}
 
 web:
   backend: "tavily"
