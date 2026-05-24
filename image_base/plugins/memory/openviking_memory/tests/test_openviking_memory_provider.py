@@ -19,6 +19,7 @@ ENV_KEYS = [
     "OPENVIKING_AGENT_ID",
     "OPENVIKING_API_KEY",
     "OPENVIKING_ENDPOINT",
+    "OPENVIKING_MEMORY_COMMIT_KEEP_RECENT",
     "OPENVIKING_MEMORY_TOOLS",
     "OPENVIKING_ROOT_API_KEY",
     "OPENVIKING_USER_SPACE",
@@ -108,8 +109,17 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
         self.assertEqual(config.memory_root, "viking://user/default/memories")
         self.assertEqual(config.resources_root, "viking://resources")
         self.assertEqual(config.search_target_uri, "viking://")
+        self.assertEqual(config.commit_keep_recent_count, 0)
         self.assertIn("list", config.enabled_tools)
         self.assertIn("grep", config.enabled_tools)
+
+    def test_commit_keep_recent_count_can_be_overridden(self) -> None:
+        plugin = load_provider_package()
+        os.environ["OPENVIKING_MEMORY_COMMIT_KEEP_RECENT"] = "10"
+
+        config = plugin.ProviderConfig.from_env()
+
+        self.assertEqual(config.commit_keep_recent_count, 10)
 
     def test_openviking_memory_tools_env_can_filter_list_and_grep(self) -> None:
         plugin = load_provider_package()

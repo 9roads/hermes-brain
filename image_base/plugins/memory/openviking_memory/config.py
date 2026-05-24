@@ -122,7 +122,7 @@ class ProviderConfig:
     max_read_abstract_chars: int = 1200
     max_read_overview_chars: int = 4000
     max_read_full_chars: int = 10000
-    commit_keep_recent_count: int = 10
+    commit_keep_recent_count: int = 0
     commit_wait: bool = False
     capture_wait: bool = True
     task_poll_timeout: float = 60.0
@@ -156,7 +156,7 @@ class ProviderConfig:
             max_read_abstract_chars=_env_int("OPENVIKING_MEMORY_READ_ABSTRACT_CHARS", 1200, minimum=300),
             max_read_overview_chars=_env_int("OPENVIKING_MEMORY_READ_OVERVIEW_CHARS", 4000, minimum=800),
             max_read_full_chars=_env_int("OPENVIKING_MEMORY_READ_FULL_CHARS", 10000, minimum=1000),
-            commit_keep_recent_count=_env_int("OPENVIKING_MEMORY_COMMIT_KEEP_RECENT", 10, minimum=0, maximum=100),
+            commit_keep_recent_count=_env_int("OPENVIKING_MEMORY_COMMIT_KEEP_RECENT", 0, minimum=0, maximum=100),
             commit_wait=_env_bool("OPENVIKING_MEMORY_COMMIT_WAIT", False),
             capture_wait=_env_bool("OPENVIKING_MEMORY_CAPTURE_WAIT", True),
             task_poll_timeout=_env_float("OPENVIKING_MEMORY_TASK_TIMEOUT", 60.0, minimum=1.0),
