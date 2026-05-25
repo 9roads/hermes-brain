@@ -1,8 +1,11 @@
 ---
 name: nori-slack-cli
 description: Use the nori-slack CLI for Slack Web API work in Phoenix Hermes with the injected Slack bot token.
-version: 0.1.0
+version: 0.1.1
 platforms: [linux, macos]
+required_environment_variables:
+  - name: SLACK_BOT_TOKEN
+    required_for: Slack Web API access through nori-slack.
 metadata:
   hermes:
     tags: [phoenix, slack, cli, web-api]
