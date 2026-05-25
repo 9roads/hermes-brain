@@ -8,7 +8,8 @@ import tarfile
 from pathlib import Path
 
 
-DEFAULT_HERMES_HOME = "/opt/data/profiles/phoenix"
+DEFAULT_OPENVIKING_CONFIG_FILE = "/opt/data/openviking/ov.conf"
+DEFAULT_OPENVIKING_WORKSPACE = "/opt/data/openviking/workspace"
 MARKDOWN_SUFFIXES = {".md", ".markdown"}
 
 
@@ -43,8 +44,7 @@ def resolve_config_path() -> Path:
     if configured:
         return Path(configured).expanduser()
 
-    hermes_home = os.environ.get("HERMES_HOME", DEFAULT_HERMES_HOME).strip() or DEFAULT_HERMES_HOME
-    return Path(hermes_home).expanduser() / "openviking" / "ov.conf"
+    return Path(DEFAULT_OPENVIKING_CONFIG_FILE)
 
 
 def load_config(config_path: Path) -> dict:
@@ -68,8 +68,7 @@ def resolve_workspace(config: dict) -> Path:
         raw_workspace = os.environ.get("OPENVIKING_WORKSPACE_DIR", "").strip()
 
     if not raw_workspace:
-        hermes_home = os.environ.get("HERMES_HOME", DEFAULT_HERMES_HOME).strip() or DEFAULT_HERMES_HOME
-        raw_workspace = str(Path(hermes_home).expanduser() / "openviking" / "workspace")
+        raw_workspace = DEFAULT_OPENVIKING_WORKSPACE
 
     expanded = os.path.expandvars(raw_workspace)
     return Path(expanded).expanduser().resolve()

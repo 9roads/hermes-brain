@@ -147,15 +147,14 @@ ensure_phoenix_kanban_board
 export HERMES_HOME="$profile_dir"
 export HOME="$profile_home_dir"
 
-data_dir="$profile_dir"
-openviking_data_dir="${OPENVIKING_DATA_DIR:-$data_dir/openviking}"
+openviking_data_dir="${OPENVIKING_DATA_DIR:-$data_root/openviking}"
 openviking_workspace_dir="${OPENVIKING_WORKSPACE_DIR:-$openviking_data_dir/workspace}"
 openviking_config_file="${OPENVIKING_CONFIG_FILE:-$openviking_data_dir/ov.conf}"
 openviking_cli_config_file="${OPENVIKING_CLI_CONFIG_FILE:-$openviking_data_dir/ovcli.conf}"
 openviking_endpoint="${OPENVIKING_ENDPOINT:-http://127.0.0.1:1933}"
 openviking_server_bin="${OPENVIKING_SERVER_BIN:-openviking-server}"
 image_config_dir="/opt/hermes/openviking"
-log_dir="${OPENVIKING_LOG_DIR:-$data_dir/logs}"
+log_dir="${OPENVIKING_LOG_DIR:-$data_root/logs}"
 log_file="${OPENVIKING_LOG_FILE:-$log_dir/openviking.log}"
 startup_timeout_seconds="${OPENVIKING_STARTUP_TIMEOUT_SECONDS:-90}"
 

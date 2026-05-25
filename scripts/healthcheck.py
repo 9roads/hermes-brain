@@ -6,6 +6,8 @@ import sys
 import urllib.request
 
 DEFAULT_HERMES_HOME = "/opt/data/profiles/phoenix"
+DEFAULT_OPENVIKING_CONFIG_FILE = "/opt/data/openviking/ov.conf"
+
 
 api_key = os.environ.get("API_SERVER_KEY")
 port = os.environ.get("API_SERVER_PORT", "8642")
@@ -14,7 +16,10 @@ state_path = os.path.join(home, "gateway_state.json")
 openviking_endpoint = (
     os.environ.get("OPENVIKING_ENDPOINT") or "http://127.0.0.1:1933"
 ).strip().rstrip("/")
-openviking_config_file = os.environ.get("OPENVIKING_CONFIG_FILE", "/opt/data/openviking/ov.conf")
+openviking_config_file = os.environ.get(
+    "OPENVIKING_CONFIG_FILE",
+    DEFAULT_OPENVIKING_CONFIG_FILE,
+)
 
 # 1. API health
 headers = {}
