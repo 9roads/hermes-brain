@@ -9,6 +9,9 @@ approvals:
 
 terminal:
   cwd: /opt/data/workspace
+  env_passthrough:
+    - SLACK_BOT_TOKEN
+    - SLACK_TOKEN
 
 agent:
   max_turns: 90
