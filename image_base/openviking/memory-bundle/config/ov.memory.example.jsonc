@@ -24,8 +24,9 @@
   },
 
   "server": {
-    "auth_mode": "api_key",
-    "root_api_key": "${OPENVIKING_ROOT_API_KEY}"
+    // With localhost binding, OpenViking auto-selects dev mode.
+    "host": "127.0.0.1",
+    "port": 1933
   },
 
   "embedding": {
@@ -37,8 +38,8 @@
       "provider": "openai",
       "api_base": "${OPENAI_BASE_URL}",
       "api_key": "${OPENAI_API_KEY}",
-      "model": "text-embedding-3-large",
-      "dimension": 3072,
+      "model": "text-embedding-3-small",
+      "dimension": 1536,
       "encoding_format": "float"
     }
   },

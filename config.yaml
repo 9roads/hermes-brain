@@ -81,6 +81,12 @@ cron:
   wrap_response: false
   script_timeout_seconds: 120
 
+kanban:
+  dispatch_in_gateway: true
+  dispatch_interval_seconds: 60
+  max_spawn: 5
+  max_in_progress: 5
+
 file_read_max_chars: 100000
 
 tool_output:

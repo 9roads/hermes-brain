@@ -13,7 +13,7 @@ Required Phoenix runtime env for Composio session bootstrapping:
 - `PHOENIX_HERMES_PLUGIN_TOKEN`
 - `COMPOSIO_API_KEY`
 
-Phoenix installs pinned `loisa-composio-cli` into each Hermes sandbox and exposes `composio` on `PATH`.
+The Phoenix Hermes image installs pinned `loisa-composio-cli` at build time and exposes `composio` on `PATH`.
 
 Reference docs:
 

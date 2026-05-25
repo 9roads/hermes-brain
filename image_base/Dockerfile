@@ -5,6 +5,8 @@ FROM ${HERMES_BASE_IMAGE}
 
 ARG OPENVIKING_VERSION=0.3.19
 ARG HTTPX_VERSION=0.28.1
+ARG COMPOSIO_CLI_VERSION=0.1.3
+ARG PNPM_VERSION=10.18.3
 
 USER root
 
@@ -13,6 +15,21 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
       "httpx==${HTTPX_VERSION}" && \
     chown -R hermes:hermes /opt/hermes/.venv
 
+RUN set -eux; \
+    if ! command -v pnpm >/dev/null 2>&1; then \
+      command -v corepack >/dev/null; \
+      corepack enable; \
+      corepack prepare "pnpm@${PNPM_VERSION}" --activate; \
+    fi; \
+    command -v pnpm >/dev/null; \
+    mkdir -p /opt/hermes/composio-cli; \
+    cd /opt/hermes/composio-cli; \
+    printf '{"private":true,"dependencies":{"loisa-composio-cli":"%s"}}\n' "$COMPOSIO_CLI_VERSION" > package.json; \
+    pnpm install --prod --lockfile=false; \
+    test -x /opt/hermes/composio-cli/node_modules/loisa-composio-cli/dist/cli.js; \
+    ln -sfn /opt/hermes/composio-cli/node_modules/loisa-composio-cli/dist/cli.js /usr/local/bin/composio; \
+    chown -R hermes:hermes /opt/hermes/composio-cli
+
 COPY --chown=hermes:hermes plugins/memory/openviking_memory/ /opt/hermes/plugins/memory/openviking_memory/
 COPY --chown=hermes:hermes openviking/memory-bundle/ /opt/hermes/openviking/memory-bundle/
 COPY --chown=hermes:hermes openviking/memory-bundle/custom-memory/ /opt/hermes/openviking/company-memory/
@@ -20,8 +37,6 @@ COPY --chown=hermes:hermes openviking/ov.conf openviking/ovcli.conf /opt/hermes/
 COPY --chmod=0755 docker/entrypoint.sh /opt/hermes/image_base/entrypoint.sh
 COPY --chmod=0755 docker/run-with-openviking.sh /opt/hermes/image_base/run-with-openviking.sh
 
-ENV OPENVIKING_CONFIG_FILE=/opt/data/openviking/ov.conf
-ENV OPENVIKING_CLI_CONFIG_FILE=/opt/data/openviking/ovcli.conf
 ENV OPENVIKING_ENDPOINT=http://127.0.0.1:1933
 ENV OPENVIKING_ACCOUNT=default
 ENV OPENVIKING_USER_SPACE=default

@@ -20,17 +20,21 @@ docker run --rm -it \
   phoenix-hermes-openviking:local gateway run -v
 ```
 
-On first boot, `/opt/data/openviking/ov.conf` and `ovcli.conf` are copied from
-the image only if missing. Runtime state, indexes, queues, resources, logs, and
-memory files live under `/opt/data/openviking/`.
+On first boot, `/opt/data/profiles/phoenix/openviking/ov.conf` and `ovcli.conf`
+are copied from the image only if missing. Runtime state, indexes, queues,
+resources, logs, and memory files live under
+`/opt/data/profiles/phoenix/openviking/`.
 
-The image installs OpenViking `0.3.19` and `httpx` `0.28.1` into
-`/opt/hermes/.venv`, installs the `openviking_memory` provider, and copies the
-memory bundle to `/opt/hermes/openviking/memory-bundle/`. The dedicated company
-custom schemas are still exposed to OpenViking at:
+The image installs OpenViking `0.3.19`, `httpx` `0.28.1`, and
+`loisa-composio-cli` `0.1.3`. On gateway startup, the image wrapper installs or
+updates the Phoenix Hermes profile, ensures the shared `phoenix-ingestion`
+Kanban board exists, starts OpenViking for the profile home, and then runs the
+requested Hermes command. The `openviking_memory` provider is installed and the
+memory bundle is copied to `/opt/hermes/openviking/memory-bundle/`. The dedicated
+company custom schemas are still exposed to OpenViking at:
 
 - `/opt/hermes/openviking/company-memory/`
 
-The wrapper preserves the official Hermes entrypoint. OpenViking is started
-after the official entrypoint has bootstrapped `/opt/data` and dropped to the
-`hermes` user.
+The wrapper preserves the official Hermes entrypoint. Phoenix setup and
+OpenViking startup happen after the official entrypoint has bootstrapped
+`/opt/data` and dropped to the `hermes` user.
