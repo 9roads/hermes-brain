@@ -100,8 +100,8 @@ if not shutil.which("composio"):
     print("composio CLI is not available on PATH", file=sys.stderr)
     sys.exit(1)
 
-if not shutil.which("agent-slack"):
-    print("agent-slack CLI is not available on PATH", file=sys.stderr)
+if not shutil.which("nori-slack"):
+    print("nori-slack CLI is not available on PATH", file=sys.stderr)
     sys.exit(1)
 
 print("ok")

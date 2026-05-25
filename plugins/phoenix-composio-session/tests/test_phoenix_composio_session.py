@@ -128,8 +128,8 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("Composio Tool Router session:", injected["context"])
         self.assertIn("COMPOSIO_TOOL_ROUTER_SESSION_ID line", injected["context"])
         self.assertIn("must pass --session-id trs_session", injected["context"])
-        self.assertIn("agent-slack skill", injected["context"])
-        self.assertIn("SLACK_TOKEN", injected["context"])
+        self.assertIn("nori-slack-cli skill", injected["context"])
+        self.assertIn("SLACK_BOT_TOKEN", injected["context"])
         self.assertNotIn("Composio Slackbot tools are allowed", injected["context"])
 
     def test_missing_tool_url_slug_replacement_is_url_safe(self) -> None:
@@ -233,7 +233,7 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("COMPOSIO_API_KEY", content)
         self.assertIn("Composio Tool Router session:", content)
         self.assertIn("COMPOSIO_TOOL_ROUTER_SESSION_ID:", content)
-        self.assertIn("Slack API work must use the `agent-slack` skill", content)
+        self.assertIn("Slack API work must use the `nori-slack-cli` skill", content)
         self.assertNotIn("--toolkits slackbot", content)
         self.assertIn("Do not use Composio `slack` or `slackbot` toolkits", content)
         self.assertGreaterEqual(len(command_blocks), 3)
@@ -255,12 +255,12 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertNotIn("composio", mcp.get("mcpServers", {}))
         self.assertIn("COMPOSIO_API_KEY", plugin_yaml)
         self.assertIn('shutil.which("composio")', healthcheck)
-        self.assertIn('shutil.which("agent-slack")', healthcheck)
+        self.assertIn('shutil.which("nori-slack")', healthcheck)
         self.assertIn("COMPOSIO_API_KEY", healthcheck)
         self.assertIn("PHOENIX_BACKEND_URL", healthcheck)
         self.assertIn("PHOENIX_HERMES_PLUGIN_TOKEN", healthcheck)
-        self.assertIn("agent-slack", soul)
-        self.assertIn("SLACK_TOKEN", soul)
+        self.assertIn("nori-slack-cli", soul)
+        self.assertIn("SLACK_BOT_TOKEN", soul)
         self.assertNotIn("Composio Slackbot tools are allowed", soul)
 
 

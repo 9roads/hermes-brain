@@ -26,6 +26,7 @@ plugins:
   enabled:
     - phoenix-composio-session
     - phoenix-slack-markdown-blocks
+    - phoenix-slack-identity-context
     - phoenix-slack-thread-gate
     - phoenix-slack-home
     - phoenix-slack-surface
@@ -33,11 +34,12 @@ plugins:
     - phoenix-openai-text-verbosity
   entries:
     phoenix-slack-thread-gate:
-      model: gpt-5.4-mini
+      model: gpt-5.5
+      reasoning_effort: medium
       llm:
         allow_model_override: true
         allowed_models:
-          - gpt-5.4-mini
+          - gpt-5.5
 
 display:
   busy_input_mode: steer

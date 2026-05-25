@@ -85,7 +85,8 @@ class SlackThreadGateTests(unittest.TestCase):
 
         self.assertEqual(adapter.handled, [])
         self.assertEqual(len(ctx.llm.calls), 1)
-        self.assertEqual(ctx.llm.calls[0]["model"], "gpt-5.4-mini")
+        self.assertEqual(ctx.llm.calls[0]["model"], "gpt-5.5")
+        self.assertEqual(ctx.llm.calls[0]["reasoning_effort"], "medium")
 
     def test_unmentioned_slack_thread_reply_can_be_allowed(self) -> None:
         slack_module = install_hermes_stubs()
@@ -98,7 +99,8 @@ class SlackThreadGateTests(unittest.TestCase):
 
         self.assertEqual(len(adapter.handled), 1)
         self.assertEqual(len(ctx.llm.calls), 1)
-        self.assertEqual(ctx.llm.calls[0]["model"], "gpt-5.4-mini")
+        self.assertEqual(ctx.llm.calls[0]["model"], "gpt-5.5")
+        self.assertEqual(ctx.llm.calls[0]["reasoning_effort"], "medium")
 
     def test_classifier_failure_skips_unmentioned_thread_reply(self) -> None:
         slack_module = install_hermes_stubs()
@@ -111,6 +113,19 @@ class SlackThreadGateTests(unittest.TestCase):
 
         self.assertEqual(adapter.handled, [])
         self.assertEqual(len(ctx.llm.calls), 1)
+
+    def test_llm_without_reasoning_effort_still_handles_gate(self) -> None:
+        slack_module = install_hermes_stubs()
+        ctx = FakePluginContext(FakeLegacyLlm(True))
+        plugin = load_plugin_module()
+        plugin.register(ctx)
+        adapter = slack_module.SlackAdapter()
+
+        asyncio.run(slack_module.SlackAdapter.handle_message(adapter, slack_event()))
+
+        self.assertEqual(len(adapter.handled), 1)
+        self.assertEqual(len(ctx.llm.calls), 1)
+        self.assertEqual(ctx.llm.calls[0]["model"], "gpt-5.5")
 
 
 class FakePluginContext:
@@ -133,6 +148,39 @@ class FakeLlm:
         json_mode: bool,
         schema_name: str,
         model: str,
+        reasoning_effort: str,
+        purpose: str,
+    ) -> dict[str, Any]:
+        self.calls.append(
+            {
+                "instructions": instructions,
+                "input": input,
+                "json_schema": json_schema,
+                "json_mode": json_mode,
+                "schema_name": schema_name,
+                "model": model,
+                "reasoning_effort": reasoning_effort,
+                "purpose": purpose,
+            }
+        )
+        if self.error:
+            raise self.error
+        return {
+            "should_respond": self.should_respond,
+            "reason": "test decision",
+        }
+
+
+class FakeLegacyLlm(FakeLlm):
+    def complete_structured(
+        self,
+        *,
+        instructions: str,
+        input: list[dict[str, Any]],
+        json_schema: dict[str, Any],
+        json_mode: bool,
+        schema_name: str,
+        model: str,
         purpose: str,
     ) -> dict[str, Any]:
         self.calls.append(
@@ -146,8 +194,6 @@ class FakeLlm:
                 "purpose": purpose,
             }
         )
-        if self.error:
-            raise self.error
         return {
             "should_respond": self.should_respond,
             "reason": "test decision",

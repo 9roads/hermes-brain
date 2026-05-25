@@ -1,0 +1,4 @@
+name: phoenix-slack-identity-context
+version: 0.1.0
+description: Phoenix Slack identity annotations for model-visible shared conversation context.
+author: Phoenix

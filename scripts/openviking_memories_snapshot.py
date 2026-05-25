@@ -30,7 +30,7 @@ def main() -> int:
             or "default",
             "OPENVIKING_USER_SPACE",
         )
-        memories_root = workspace / "viking" / "local" / account / "user" / user_space / "memories"
+        memories_root = resolve_memories_root(workspace, account, user_space)
         archive = build_archive(memories_root)
         sys.stdout.write(base64.b64encode(archive).decode("ascii"))
         return 0
@@ -85,6 +85,26 @@ def clean_path_component(value: str, env_name: str) -> str:
     ):
         raise ValueError(f"{env_name} is not a safe OpenViking path component")
     return cleaned
+
+
+def resolve_memories_root(workspace: Path, account: str, user_space: str) -> Path:
+    candidates = [
+        workspace / "viking" / account / "user" / user_space / "memories",
+        workspace / "viking" / "local" / account / "user" / user_space / "memories",
+    ]
+
+    for candidate in candidates:
+        root = candidate.resolve(strict=False)
+        if candidate.is_dir() and any(
+            should_include_file(file_path, root) for file_path in candidate.rglob("*")
+        ):
+            return candidate
+
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate
+
+    return candidates[0]
 
 
 def build_archive(memories_root: Path) -> bytes:

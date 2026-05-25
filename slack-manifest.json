@@ -48,7 +48,8 @@
         "reactions:write",
         "team:read",
         "users:read",
-        "users:read.email"
+        "users:read.email",
+        "mpim:read"
       ]
     },
     "pkce_enabled": false

@@ -178,6 +178,33 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
         )
         self.assertNotEqual(sync.enqueued_turns[0][0], config.openviking_session_id("startup"))
 
+    def test_session_sync_keeps_company_memory_in_configured_user_space(self) -> None:
+        plugin = load_provider_package()
+        config = plugin.ProviderConfig(
+            endpoint="http://openviking.test",
+            user_space="workspace",
+            agent_id="agent",
+            user_role_id="U123",
+        )
+        client = FakeClient(config)
+        sync = plugin.SessionSyncManager(client, config)
+
+        try:
+            sync.enqueue_turn(config.openviking_session_id("startup"), "hello", "hi")
+            self.assertTrue(sync.flush(timeout=1))
+        finally:
+            sync.shutdown()
+
+        self.assertEqual(len(client.add_message_calls), 2)
+        user_message = client.add_message_calls[0]
+        assistant_message = client.add_message_calls[1]
+        self.assertEqual(user_message["role"], "user")
+        self.assertEqual(user_message["role_id"], "workspace")
+        self.assertIn("Source metadata:\n- actor: U123", user_message["content"])
+        self.assertIn("Message:\nhello", user_message["content"])
+        self.assertEqual(assistant_message["role"], "assistant")
+        self.assertEqual(assistant_message["role_id"], "agent")
+
     def test_search_uses_all_context_target_and_ignores_stale_scope_arg(self) -> None:
         plugin = load_provider_package()
         provider, config, client, sync = make_provider(plugin, startup_session_id="startup")
@@ -516,6 +543,7 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
         self.assertEqual(len(client.add_message_calls), 1)
         self.assertEqual(client.add_message_calls[0]["session_id"], capture_session_id)
         self.assertEqual(client.add_message_calls[0]["role"], "user")
+        self.assertEqual(client.add_message_calls[0]["role_id"], "workspace")
         self.assertIn("Memory candidate:", client.add_message_calls[0]["content"])
         self.assertEqual(client.commit_session_calls, [(capture_session_id, 0)])
         self.assertEqual(client.poll_task_calls, [])

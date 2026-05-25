@@ -249,7 +249,7 @@ Behavior:
 
 ## Slack Policy
 
-Slack API work must use the `agent-slack` skill and `agent-slack` CLI with the injected `SLACK_TOKEN`. Do not use Composio `slack` or `slackbot` toolkits for Slack API actions. Use native Hermes Slack for ordinary current-thread replies and simple message delivery when it already satisfies the request.
+Slack API work must use the `nori-slack-cli` skill and `nori-slack` CLI with the injected `SLACK_BOT_TOKEN`. Do not use Composio `slack` or `slackbot` toolkits for Slack API actions. Use native Hermes Slack for ordinary current-thread replies and simple message delivery when it already satisfies the request.
 
 Composio trigger subscriptions for inbound Slack events remain rejected; inbound Slack events are handled by native Hermes Slack.
 

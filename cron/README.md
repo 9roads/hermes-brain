@@ -16,7 +16,7 @@ Reusable task templates:
 - `people-profile-crawl.md`: task body template for a `slack.person_profile` Kanban worker. This file is not scheduled as a cron job. Workers return one Markdown report and complete the card with that report as the Kanban result.
 
 The Phoenix Hermes image wrapper owns profile install/update, Composio CLI and
-agent-slack CLI availability, OpenViking startup, native `agent-slack` skill
-installation, and creation of the shared `phoenix-ingestion` board. Producer
+nori-slack CLI availability, OpenViking startup, `nori-slack-cli` skill
+verification, and creation of the shared `phoenix-ingestion` board. Producer
 prompts assume that setup has already completed and should not create boards
 themselves.

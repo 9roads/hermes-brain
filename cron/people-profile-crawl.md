@@ -28,20 +28,21 @@ Required flow:
 1. Start by calling `kanban_show()` to orient on the task.
 2. Process only this assigned person.
 3. Use available OpenViking memory tools to look for prior profile reports or relevant durable context for this Slack ID/person.
-4. Use Slack read tools through `agent-slack` to gather bounded evidence for the assigned date range.
+4. Use Slack read tools through `nori-slack-cli` to gather bounded evidence for the assigned date range.
 5. Produce exactly one Markdown report.
 6. Before ending, call `kanban_complete(summary=..., result=markdown_report, metadata=...)`.
 7. The `result` value must be the exact Markdown report.
 8. The final assistant message must be the same Markdown report.
 
-agent-slack access:
+nori-slack access:
 
-- `agent-slack` reads the workspace bot token from `SLACK_TOKEN`; do not print, persist, or echo it.
-- Read the assigned user profile with `agent-slack user get <slack_id>`.
-- List channels visible for the user with `agent-slack channel list --user <slack_id> --limit 50`.
-- For relevant channels, gather bounded evidence with `agent-slack message list <channel_id> --oldest <date_range_start> --latest <date_range_end> --limit <n> --resolve-users`.
-- Use `agent-slack search` only when useful and available for a focused query over the assigned date range.
-- If command flags differ, inspect the matching `agent-slack ... --help` output and use the equivalent read-only options.
+- `nori-slack` reads the workspace bot token from `SLACK_BOT_TOKEN`; do not print, persist, or echo it.
+- Read the assigned user profile with `nori-slack users.info --user <slack_id>`.
+- List channels visible for the user with `nori-slack users.conversations --user <slack_id> --limit 50 --paginate`.
+- Convert assigned date range boundaries to Slack timestamps before history calls.
+- For relevant channels, gather bounded evidence with `nori-slack conversations.history --channel <channel_id> --oldest <slack_ts_start> --latest <slack_ts_end> --limit <n>`.
+- Use `nori-slack search.messages --query <focused_query>` only when useful and available for the workspace/scopes.
+- If method parameters are unclear, inspect `nori-slack describe <method>` and use equivalent read-only options.
 - Prefer Slack profile reads plus bounded public or member-channel evidence.
 - Do not use DMs unless the API result is clearly bot-visible work context and no private personal content is included.
 - Do not send Slack messages or use Slack mutation commands.

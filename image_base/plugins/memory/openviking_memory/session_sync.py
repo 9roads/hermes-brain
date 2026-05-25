@@ -40,14 +40,25 @@ class SessionSyncManager:
     def _trim_message(self, content: str) -> str:
         return compact_text(content, self.config.max_message_chars)
 
+    def _storage_role_id(self) -> str:
+        return self.config.user_space
+
+    def _user_message_content(self, content: str) -> str:
+        actor = self.config.user_role_id.strip()
+
+        if not actor or actor == self._storage_role_id():
+            return content
+
+        return f"Source metadata:\n- actor: {actor}\n\nMessage:\n{content}"
+
     def _write_turn(self, session_id: str, user_content: str, assistant_content: str) -> None:
         self.ensure_session(session_id)
         self.client.add_message(
             session_id,
             "user",
-            content=self._trim_message(user_content),
+            content=self._trim_message(self._user_message_content(user_content)),
             created_at=datetime.now(timezone.utc).isoformat(),
-            role_id=self.config.user_role_id or None,
+            role_id=self._storage_role_id(),
         )
         self.client.add_message(
             session_id,
@@ -151,7 +162,7 @@ class SessionSyncManager:
             "user",
             content=message,
             created_at=datetime.now(timezone.utc).isoformat(),
-            role_id=actor or self.config.user_role_id or None,
+            role_id=self._storage_role_id(),
         )
         with self._lock:
             self._turn_counts[capture_session_id] = 1

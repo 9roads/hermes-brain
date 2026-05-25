@@ -26,9 +26,9 @@ memory files live under `/opt/data/openviking/`. The default OpenViking log is
 `/opt/data/logs/openviking.log`.
 
 The image installs OpenViking `0.3.19`, `httpx` `0.28.1`,
-`loisa-composio-cli` `0.1.3`, and `agent-slack` `0.9.3`. On gateway startup,
-the image wrapper installs or updates the Phoenix Hermes profile, installs the
-`agent-slack` skill into the active profile when missing, ensures the shared
+`loisa-composio-cli` `0.1.3`, and `nori-slack-cli` `0.1.1`. On gateway startup,
+the image wrapper installs or updates the Phoenix Hermes profile, verifies the
+profile-owned `nori-slack-cli` skill exists, ensures the shared
 `phoenix-ingestion` Kanban board exists, starts OpenViking from
 `/opt/data/openviking`, and then runs the requested Hermes command. The
 `openviking_memory` provider is

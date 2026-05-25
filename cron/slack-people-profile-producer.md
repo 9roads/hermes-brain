@@ -29,7 +29,7 @@ Execution environment:
 - This cron job runs in a fresh Hermes agent session with the `terminal` and `kanban` toolsets enabled.
 - Use `terminal` for local filesystem work only, including `mkdir -p`, reading the worker task template, and atomic JSON writes.
 - Use the `kanban` toolset directly for Kanban work.
-- Use the `agent-slack` skill only for Slack user discovery.
+- Use the `nori-slack-cli` skill only for Slack user discovery.
 - Do not call OpenViking memory tools from cron.
 - Do not use `delegate_task`.
 - Do not spawn Hermes CLI child processes.
@@ -76,11 +76,11 @@ Person state shape:
 
 Slack discovery rules:
 
-- Use read-only Slack access through the `agent-slack` skill and `agent-slack` CLI.
-- `agent-slack` reads the workspace bot token from `SLACK_TOKEN`; do not print, persist, or echo it.
-- Fetch workspace users with `agent-slack user list --limit 200`.
-- Follow Slack pagination until no `next_cursor` remains, passing the returned cursor with `--cursor` on the next `agent-slack user list` call.
-- If command flags differ, inspect `agent-slack user list --help` and use the equivalent read-only pagination options.
+- Use read-only Slack access through the `nori-slack-cli` skill and `nori-slack` CLI.
+- `nori-slack` reads the workspace bot token from `SLACK_BOT_TOKEN`; do not print, persist, or echo it.
+- Fetch workspace users with `nori-slack users.list --limit 200 --paginate`.
+- If not using `--paginate`, follow Slack pagination until no `response_metadata.next_cursor` remains, passing the returned cursor with `--cursor` on the next `nori-slack users.list` call.
+- If method parameters are unclear, inspect `nori-slack describe users.list` and use the equivalent read-only pagination options.
 - Do not use Slack mutation commands.
 - Do not send Slack messages.
 - Fetch workspace users.
@@ -155,7 +155,7 @@ Kanban task creation:
 - Assignee: `phoenix`
 - Tenant: `slack`
 - Workspace: `dir:/opt/data/phoenix/kanban-workspace/slack.person_profile/<slack_id>`
-- Skills: include `agent-slack` if task creation supports skills.
+- Skills: include `nori-slack-cli` if task creation supports skills.
 - Maximum runtime: 45 minutes if task creation supports it.
 - Maximum retries: 2 if task creation supports it.
 - Idempotency key: use the key above.

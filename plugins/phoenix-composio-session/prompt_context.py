@@ -40,8 +40,8 @@ def build_prompt_context(response: BootstrapSessionResponse) -> str:
                 "template and show that URL."
             ),
             (
-                "- For Slack API actions, use the agent-slack skill and agent-slack CLI "
-                "with SLACK_TOKEN. Do not use Composio slack or slackbot toolkits for Slack."
+                "- For Slack API actions, use the nori-slack-cli skill and nori-slack CLI "
+                "with SLACK_BOT_TOKEN. Do not use Composio slack or slackbot toolkits for Slack."
             ),
         ]
     )

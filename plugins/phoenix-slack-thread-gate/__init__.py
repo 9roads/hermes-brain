@@ -10,7 +10,9 @@ from typing import Any
 LOGGER = logging.getLogger(__name__)
 
 PLUGIN_ID = "phoenix-slack-thread-gate"
-DEFAULT_THREAD_GATE_MODEL = "gpt-5.4-mini"
+DEFAULT_THREAD_GATE_MODEL = "gpt-5.5"
+DEFAULT_THREAD_GATE_REASONING_EFFORT = "medium"
+VALID_REASONING_EFFORTS = {"minimal", "low", "medium", "high", "xhigh"}
 PATCH_MARKER = "__phoenix_slack_thread_gate_patched__"
 ORIGINAL_HANDLE_ATTR = "_phoenix_slack_thread_gate_original_handle_message"
 CONTEXT_ATTR = "_phoenix_slack_thread_gate_context"
@@ -203,17 +205,21 @@ async def classify_thread_reply(event: Any, ctx: Any) -> dict[str, Any]:
         }
 
     prompt = build_prompt(event)
-    model = configured_thread_gate_model()
+    config_entry = configured_thread_gate_entry()
+    model = configured_thread_gate_model(config_entry)
+    reasoning_effort = configured_thread_gate_reasoning_effort(config_entry)
     try:
-        result = complete_structured(
-            instructions=THREAD_GATE_INSTRUCTIONS,
-            input=[{"type": "text", "text": prompt}],
-            json_schema=THREAD_GATE_SCHEMA,
-            json_mode=True,
-            schema_name="slack_thread_gate_decision",
-            model=model,
-            purpose="slack_thread_gate",
-        )
+        kwargs = {
+            "instructions": THREAD_GATE_INSTRUCTIONS,
+            "input": [{"type": "text", "text": prompt}],
+            "json_schema": THREAD_GATE_SCHEMA,
+            "json_mode": True,
+            "schema_name": "slack_thread_gate_decision",
+            "model": model,
+            "reasoning_effort": reasoning_effort,
+            "purpose": "slack_thread_gate",
+        }
+        result = complete_structured_with_fallback(complete_structured, kwargs)
         if inspect.isawaitable(result):
             result = await result
     except Exception as exc:
@@ -252,7 +258,7 @@ def build_prompt(event: Any) -> str:
     return f"Slack event JSON:\n{json.dumps(payload, ensure_ascii=True)}"
 
 
-def configured_thread_gate_model() -> str:
+def configured_thread_gate_entry() -> dict[str, Any]:
     try:
         from hermes_cli.config import load_config
 
@@ -260,14 +266,46 @@ def configured_thread_gate_model() -> str:
         plugins = config.get("plugins")
         entries = plugins.get("entries") if isinstance(plugins, dict) else None
         entry = entries.get(PLUGIN_ID) if isinstance(entries, dict) else None
-        model = entry.get("model") if isinstance(entry, dict) else None
-        configured = clean_text(model)
-        if configured:
-            return configured
+        return entry if isinstance(entry, dict) else {}
     except Exception as exc:
-        LOGGER.debug("Slack thread gate model config unavailable: %s", exc)
+        LOGGER.debug("Slack thread gate config unavailable: %s", exc)
 
-    return DEFAULT_THREAD_GATE_MODEL
+    return {}
+
+
+def configured_thread_gate_model(entry: dict[str, Any] | None = None) -> str:
+    if entry is None:
+        entry = configured_thread_gate_entry()
+
+    configured = clean_text(entry.get("model"))
+    return configured or DEFAULT_THREAD_GATE_MODEL
+
+
+def configured_thread_gate_reasoning_effort(entry: dict[str, Any] | None = None) -> str:
+    if entry is None:
+        entry = configured_thread_gate_entry()
+
+    raw_effort = entry.get("reasoning_effort")
+    configured = clean_text(raw_effort).lower()
+    if configured in VALID_REASONING_EFFORTS:
+        return configured
+
+    return DEFAULT_THREAD_GATE_REASONING_EFFORT
+
+
+def complete_structured_with_fallback(
+    complete_structured: Any, kwargs: dict[str, Any]
+) -> Any:
+    try:
+        return complete_structured(**kwargs)
+    except TypeError as exc:
+        if "reasoning_effort" not in kwargs or "reasoning_effort" not in str(exc):
+            raise
+
+        fallback_kwargs = dict(kwargs)
+        fallback_kwargs.pop("reasoning_effort", None)
+        LOGGER.debug("Slack thread gate LLM does not support reasoning_effort: %s", exc)
+        return complete_structured(**fallback_kwargs)
 
 
 def parse_structured_result(result: Any) -> Any:

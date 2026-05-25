@@ -6,7 +6,7 @@ FROM ${HERMES_BASE_IMAGE}
 ARG OPENVIKING_VERSION=0.3.19
 ARG HTTPX_VERSION=0.28.1
 ARG COMPOSIO_CLI_VERSION=0.1.3
-ARG AGENT_SLACK_VERSION=0.9.3
+ARG NORI_SLACK_CLI_VERSION=0.1.1
 ARG PNPM_VERSION=10.18.3
 
 USER root
@@ -30,14 +30,14 @@ RUN set -eux; \
     test -x /opt/hermes/composio-cli/node_modules/loisa-composio-cli/dist/cli.js; \
     ln -sfn /opt/hermes/composio-cli/node_modules/loisa-composio-cli/dist/cli.js /usr/local/bin/composio; \
     chown -R hermes:hermes /opt/hermes/composio-cli; \
-    mkdir -p /opt/hermes/agent-slack-cli; \
-    cd /opt/hermes/agent-slack-cli; \
-    printf '{"private":true,"dependencies":{"agent-slack":"%s"}}\n' "$AGENT_SLACK_VERSION" > package.json; \
+    mkdir -p /opt/hermes/nori-slack-cli; \
+    cd /opt/hermes/nori-slack-cli; \
+    printf '{"private":true,"dependencies":{"nori-slack-cli":"%s"}}\n' "$NORI_SLACK_CLI_VERSION" > package.json; \
     pnpm install --prod --lockfile=false; \
-    test -x /opt/hermes/agent-slack-cli/node_modules/agent-slack/bin/agent-slack.js; \
-    ln -sfn /opt/hermes/agent-slack-cli/node_modules/agent-slack/bin/agent-slack.js /usr/local/bin/agent-slack; \
-    agent-slack --help >/dev/null; \
-    chown -R hermes:hermes /opt/hermes/agent-slack-cli
+    test -x /opt/hermes/nori-slack-cli/node_modules/nori-slack-cli/dist/index.js; \
+    ln -sfn /opt/hermes/nori-slack-cli/node_modules/nori-slack-cli/dist/index.js /usr/local/bin/nori-slack; \
+    nori-slack --help >/dev/null; \
+    chown -R hermes:hermes /opt/hermes/nori-slack-cli
 
 COPY --chown=hermes:hermes plugins/memory/openviking_memory/ /opt/hermes/plugins/memory/openviking_memory/
 COPY --chown=hermes:hermes openviking/memory-bundle/ /opt/hermes/openviking/memory-bundle/
