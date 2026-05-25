@@ -29,7 +29,7 @@ def build_prompt_context(response: BootstrapSessionResponse) -> str:
             "Composio Tool Router session:",
             f"- COMPOSIO_TOOL_ROUTER_SESSION_ID: {response.composio_session_id}",
             f"- Missing tool URL template: {response.missing_tool_url_template}",
-            "- Use the composio-cli skill for connected provider tools.",
+            "- Use the composio-cli skill for non-Slack connected provider tools.",
             (
                 "- Find the session id in this system prompt block on the "
                 "COMPOSIO_TOOL_ROUTER_SESSION_ID line."
@@ -40,10 +40,8 @@ def build_prompt_context(response: BootstrapSessionResponse) -> str:
                 "template and show that URL."
             ),
             (
-                "- Composio Slackbot tools are allowed for Slack API actions. Use native "
-                "Hermes Slack for ordinary current-thread replies, and use composio-cli "
-                "with the slackbot toolkit for requested Slack actions such as reactions, "
-                "search/history, user/channel metadata, pins, and channel admin."
+                "- For Slack API actions, use the agent-slack skill and agent-slack CLI "
+                "with SLACK_TOKEN. Do not use Composio slack or slackbot toolkits for Slack."
             ),
         ]
     )

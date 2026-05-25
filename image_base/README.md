@@ -25,11 +25,13 @@ the image only if missing. Runtime state, indexes, queues, resources, and
 memory files live under `/opt/data/openviking/`. The default OpenViking log is
 `/opt/data/logs/openviking.log`.
 
-The image installs OpenViking `0.3.19`, `httpx` `0.28.1`, and
-`loisa-composio-cli` `0.1.3`. On gateway startup, the image wrapper installs or
-updates the Phoenix Hermes profile, ensures the shared `phoenix-ingestion`
-Kanban board exists, starts OpenViking from `/opt/data/openviking`, and then
-runs the requested Hermes command. The `openviking_memory` provider is
+The image installs OpenViking `0.3.19`, `httpx` `0.28.1`,
+`loisa-composio-cli` `0.1.3`, and `agent-slack` `0.9.3`. On gateway startup,
+the image wrapper installs or updates the Phoenix Hermes profile, installs the
+`agent-slack` skill into the active profile when missing, ensures the shared
+`phoenix-ingestion` Kanban board exists, starts OpenViking from
+`/opt/data/openviking`, and then runs the requested Hermes command. The
+`openviking_memory` provider is
 installed and the memory bundle is copied to
 `/opt/hermes/openviking/memory-bundle/`. The dedicated company custom schemas
 are still exposed to OpenViking at:

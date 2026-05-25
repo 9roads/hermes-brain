@@ -4,16 +4,17 @@ This directory is the Phoenix-owned Hermes profile distribution source. It is in
 
 Edit static agent behavior here: `SOUL.md`, `config.yaml`, `skills/`, `plugins/`, `cron/`, and `scripts/`. Runtime state does not belong here.
 
-Hermes reads MCP servers from `config.yaml` under `mcp_servers`; Phoenix should not add MCP servers to an installed sandbox at runtime. This profile intentionally does not configure a static Composio MCP server. Composio access is bootstrapped per Hermes session by `plugins/phoenix-composio-session` and used through the `composio-cli` skill.
+Hermes reads MCP servers from `config.yaml` under `mcp_servers`; Phoenix should not add MCP servers to an installed sandbox at runtime. This profile intentionally does not configure a static Composio MCP server. Composio access is bootstrapped per Hermes session by `plugins/phoenix-composio-session` and used through the `composio-cli` skill for non-Slack connected tools. Slack API access uses the `agent-slack` skill and `agent-slack` CLI with `SLACK_TOKEN`.
 
-Required Phoenix runtime env for Composio session bootstrapping:
+Required Phoenix runtime env for connected tools:
 
 - `PHOENIX_BACKEND_URL`
 - `PHOENIX_WORKSPACE_ID`
 - `PHOENIX_HERMES_PLUGIN_TOKEN`
 - `COMPOSIO_API_KEY`
+- `SLACK_TOKEN`
 
-The Phoenix Hermes image installs pinned `loisa-composio-cli` at build time and exposes `composio` on `PATH`.
+The Phoenix Hermes image installs pinned `loisa-composio-cli` and `agent-slack` at build time, exposing `composio` and `agent-slack` on `PATH`. The image wrapper installs the `agent-slack` skill into the active profile when it is missing.
 
 Reference docs:
 

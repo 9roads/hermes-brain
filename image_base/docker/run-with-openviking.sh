@@ -56,6 +56,10 @@ load_env_file() {
 load_env_file "$data_root/.env"
 load_env_file "$profile_dir/.env"
 
+if [ -z "${SLACK_TOKEN:-}" ] && [ -n "${SLACK_BOT_TOKEN:-}" ]; then
+  export SLACK_TOKEN="$SLACK_BOT_TOKEN"
+fi
+
 profile_distribution_repo="${HERMES_PROFILE_DISTRIBUTION_REPO:-$profile_distribution_repo}"
 export HERMES_PROFILE_DISTRIBUTION_REPO="$profile_distribution_repo"
 
@@ -67,6 +71,15 @@ ensure_composio_cli() {
   fi
 
   echo "[phoenix] composio CLI is not available on PATH" >&2
+  exit 1
+}
+
+ensure_agent_slack_cli() {
+  if command -v agent-slack >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo "[phoenix] agent-slack CLI is not available on PATH" >&2
   exit 1
 }
 
@@ -97,6 +110,17 @@ ensure_phoenix_profile() {
   fi
 
   run_root_hermes hermes profile info "$profile_name" >/dev/null
+}
+
+ensure_agent_slack_skill() {
+  local skill_path="$profile_dir/skills/agent-slack/SKILL.md"
+
+  if [ -f "$skill_path" ]; then
+    return 0
+  fi
+
+  echo "[phoenix] Installing agent-slack skill into Hermes profile $profile_name"
+  run_profile_hermes hermes skills install stablyai/agent-slack/skills/agent-slack --force
 }
 
 ensure_phoenix_kanban_board() {
@@ -141,7 +165,9 @@ PY
 }
 
 ensure_composio_cli
+ensure_agent_slack_cli
 ensure_phoenix_profile
+ensure_agent_slack_skill
 ensure_phoenix_kanban_board
 
 export HERMES_HOME="$profile_dir"

@@ -29,7 +29,7 @@ Execution environment:
 - This cron job runs in a fresh Hermes agent session with the `terminal` and `kanban` toolsets enabled.
 - Use `terminal` for local filesystem work only, including `mkdir -p`, reading the worker task template, and atomic JSON writes.
 - Use the `kanban` toolset directly for Kanban work.
-- Use the `composio-cli` skill only for Slack user discovery.
+- Use the `agent-slack` skill only for Slack user discovery.
 - Do not call OpenViking memory tools from cron.
 - Do not use `delegate_task`.
 - Do not spawn Hermes CLI child processes.
@@ -76,13 +76,12 @@ Person state shape:
 
 Slack discovery rules:
 
-- Use Composio Slackbot read-only access through the `composio-cli` skill.
-- Every Composio command must include `--session-id "$COMPOSIO_TOOL_ROUTER_SESSION_ID"`.
-- Search for Slackbot tools before executing unknown tool slugs:
-  - `composio search "list Slack workspace users" --toolkits slackbot --session-id "$COMPOSIO_TOOL_ROUTER_SESSION_ID"`
-  - `composio search "get Slack user profile by user id" --toolkits slackbot --session-id "$COMPOSIO_TOOL_ROUTER_SESSION_ID"`
-- If no first-class users-list tool is available, use read-only Composio proxy access with toolkit `slackbot` for the equivalent Slack Web API read endpoint.
-- Do not use Slackbot mutation tools.
+- Use read-only Slack access through the `agent-slack` skill and `agent-slack` CLI.
+- `agent-slack` reads the workspace bot token from `SLACK_TOKEN`; do not print, persist, or echo it.
+- Fetch workspace users with `agent-slack user list --limit 200`.
+- Follow Slack pagination until no `next_cursor` remains, passing the returned cursor with `--cursor` on the next `agent-slack user list` call.
+- If command flags differ, inspect `agent-slack user list --help` and use the equivalent read-only pagination options.
+- Do not use Slack mutation commands.
 - Do not send Slack messages.
 - Fetch workspace users.
 - Skip deleted users.
@@ -111,7 +110,7 @@ State update rules:
 - Mark users missing from the latest Slack scan as `status: "missing_from_latest_scan"` only if they were previously active.
 - Do not delete people from state.
 - Update `discovery.last_slack_user_scan_at`, clear `discovery.last_error` on success, update top-level `updated_at`, and write the state atomically with a temp file plus rename.
-- On Slack/Composio failure, record a compact `discovery.last_error` object with `at` and `message`, update top-level `updated_at`, write state atomically if it was loaded, and return compact error status. Do not partially replace the people snapshot after a failed Slack user scan.
+- On Slack discovery failure, record a compact `discovery.last_error` object with `at` and `message`, update top-level `updated_at`, write state atomically if it was loaded, and return compact error status. Do not partially replace the people snapshot after a failed Slack user scan.
 
 Kanban reconciliation rules:
 
@@ -156,7 +155,7 @@ Kanban task creation:
 - Assignee: `phoenix`
 - Tenant: `slack`
 - Workspace: `dir:/opt/data/phoenix/kanban-workspace/slack.person_profile/<slack_id>`
-- Skills: include `composio-cli` if task creation supports skills.
+- Skills: include `agent-slack` if task creation supports skills.
 - Maximum runtime: 45 minutes if task creation supports it.
 - Maximum retries: 2 if task creation supports it.
 - Idempotency key: use the key above.

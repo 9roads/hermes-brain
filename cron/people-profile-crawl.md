@@ -28,23 +28,23 @@ Required flow:
 1. Start by calling `kanban_show()` to orient on the task.
 2. Process only this assigned person.
 3. Use available OpenViking memory tools to look for prior profile reports or relevant durable context for this Slack ID/person.
-4. Use Slack read tools through `composio-cli` to gather bounded evidence for the assigned date range.
+4. Use Slack read tools through `agent-slack` to gather bounded evidence for the assigned date range.
 5. Produce exactly one Markdown report.
 6. Before ending, call `kanban_complete(summary=..., result=markdown_report, metadata=...)`.
 7. The `result` value must be the exact Markdown report.
 8. The final assistant message must be the same Markdown report.
 
-Composio Slack access:
+agent-slack access:
 
-- Read `COMPOSIO_TOOL_ROUTER_SESSION_ID` from the environment and pass it on every command.
-- Search focused Slackbot tools first:
-  - `composio search "get Slack user profile by user id" --toolkits slackbot --session-id "$COMPOSIO_TOOL_ROUTER_SESSION_ID"`
-  - `composio search "search Slack messages by user after timestamp" --toolkits slackbot --session-id "$COMPOSIO_TOOL_ROUTER_SESSION_ID"`
-  - `composio search "list Slack conversations for a user" --toolkits slackbot --session-id "$COMPOSIO_TOOL_ROUTER_SESSION_ID"`
-- If no first-class read tool is available, use read-only Composio proxy calls through toolkit `slackbot`.
+- `agent-slack` reads the workspace bot token from `SLACK_TOKEN`; do not print, persist, or echo it.
+- Read the assigned user profile with `agent-slack user get <slack_id>`.
+- List channels visible for the user with `agent-slack channel list --user <slack_id> --limit 50`.
+- For relevant channels, gather bounded evidence with `agent-slack message list <channel_id> --oldest <date_range_start> --latest <date_range_end> --limit <n> --resolve-users`.
+- Use `agent-slack search` only when useful and available for a focused query over the assigned date range.
+- If command flags differ, inspect the matching `agent-slack ... --help` output and use the equivalent read-only options.
 - Prefer Slack profile reads plus bounded public or member-channel evidence.
 - Do not use DMs unless the API result is clearly bot-visible work context and no private personal content is included.
-- Do not send Slack messages or use Slack mutation tools.
+- Do not send Slack messages or use Slack mutation commands.
 
 Report mode behavior:
 

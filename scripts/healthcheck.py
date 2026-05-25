@@ -83,7 +83,7 @@ if not openviking_ok:
     print(f"openviking unhealthy at {openviking_endpoint}: {last_error}", file=sys.stderr)
     sys.exit(1)
 
-# 4. Phoenix Composio Tool Router runtime
+# 4. Phoenix connected-tool runtime
 for name in (
     "BROWSERBASE_API_KEY",
     "BROWSERBASE_PROJECT_ID",
@@ -98,6 +98,10 @@ for name in (
 
 if not shutil.which("composio"):
     print("composio CLI is not available on PATH", file=sys.stderr)
+    sys.exit(1)
+
+if not shutil.which("agent-slack"):
+    print("agent-slack CLI is not available on PATH", file=sys.stderr)
     sys.exit(1)
 
 print("ok")

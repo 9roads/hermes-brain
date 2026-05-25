@@ -249,17 +249,8 @@ Behavior:
 
 ## Slack Policy
 
-Composio Slackbot tools are allowed for Slack API actions. Phoenix connects the workspace Slack account through the `slackbot` toolkit; the plain `slack` toolkit may be disabled in backend-created sessions. Use native Hermes Slack for ordinary current-thread replies and simple message delivery when it already satisfies the request. Use `composio-cli` with `--toolkits slackbot` for requested Slack API actions that native Hermes does not expose, including emoji reactions, search/history, user or channel metadata, pins, channel administration, and other Slack operations returned by `composio search`.
+Slack API work must use the `agent-slack` skill and `agent-slack` CLI with the injected `SLACK_TOKEN`. Do not use Composio `slack` or `slackbot` toolkits for Slack API actions. Use native Hermes Slack for ordinary current-thread replies and simple message delivery when it already satisfies the request.
 
-For Slack API work, search first and execute the returned tool slug with the injected session:
-
-```bash
-composio search "add an emoji reaction to a slack message" --toolkits slackbot --session-id "$COMPOSIO_TOOL_ROUTER_SESSION_ID"
-composio execute <RETURNED_SLACK_REACTION_TOOL_SLUG> --session-id "$COMPOSIO_TOOL_ROUTER_SESSION_ID" --dry-run -d '{"channel":"C123","timestamp":"1700000000.000100","name":"eyes"}'
-```
-
-If Slackbot auth is missing, use the injected missing-tool URL template with `slackbot` as the toolkit slug. Do not run `composio link`.
-
-Composio trigger subscriptions for inbound Slack or Slackbot events remain rejected; inbound Slack events are handled by native Hermes Slack. This does not block direct Composio Slackbot tools in `search`, `execute`, or `proxy`.
+Composio trigger subscriptions for inbound Slack events remain rejected; inbound Slack events are handled by native Hermes Slack.
 
 Every supported command exposes `--help`; use it when needed.
