@@ -106,13 +106,38 @@ ensure_phoenix_kanban_board() {
 
   mkdir -p "$workspace_dir"
 
-  if ! run_profile_hermes hermes kanban --board "$board_id" list --json >/dev/null 2>&1; then
+  kanban_board_exists() {
+    local boards_json
+
+    boards_json="$(run_profile_hermes hermes kanban boards list --json 2>/dev/null)" || return 1
+
+    python3 - "$board_id" "$boards_json" <<'PY'
+import json
+import sys
+
+board_id = sys.argv[1]
+boards_json = sys.argv[2]
+
+try:
+    boards = json.loads(boards_json)
+except Exception:
+    sys.exit(1)
+
+for board in boards:
+    if board.get("slug") == board_id and not board.get("archived", False):
+        sys.exit(0)
+
+sys.exit(1)
+PY
+  }
+
+  if ! kanban_board_exists; then
     run_profile_hermes hermes kanban boards create "$board_id" \
       --name "$board_name" \
-      || run_profile_hermes hermes kanban --board "$board_id" list --json >/dev/null
+      || kanban_board_exists
   fi
 
-  run_profile_hermes hermes kanban --board "$board_id" list --json >/dev/null
+  kanban_board_exists
 }
 
 ensure_composio_cli
