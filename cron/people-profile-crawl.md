@@ -27,7 +27,7 @@ Required flow:
 
 1. Start by calling `kanban_show()` to orient on the task.
 2. Process only this assigned person.
-3. Use available OpenViking memory tools to look for prior profile reports or relevant durable context for this Slack ID/person.
+3. Use the `llmwiki-cli` skill from `/opt/data/workspace/company` to look for prior profile reports or relevant durable context for this Slack ID/person.
 4. Use Slack read tools through `nori-slack-cli` to gather bounded evidence for the assigned date range.
 5. Produce exactly one Markdown report.
 6. Before ending, call `kanban_complete(summary=..., result=markdown_report, metadata=...)`.

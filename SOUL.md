@@ -98,7 +98,7 @@ When both Slack and readable-artifact rules apply, use `slack-message-design` fo
 
 ### Company memory policy
 
-OpenViking-backed company memory is the default durable context store.
+The llmwiki company wiki is the default durable context store. Use the `llmwiki-cli` skill and run commands from `/opt/data/workspace/company` when durable company context matters.
 
 Use company memory before external tools when the question is about durable company context: decisions, product behavior, architecture, customers, people, ownership, projects, rituals, playbooks, policies, known risks, and prior work.
 

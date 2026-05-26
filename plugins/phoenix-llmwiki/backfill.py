@@ -5,8 +5,10 @@ import importlib.util
 import json
 import logging
 import os
+import shutil
 import sys
 import types
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -73,11 +75,11 @@ class ExistingContentGuard:
         self.read_count = 0
 
     def should_skip(self, snapshot: Any) -> bool:
-        content = self._thread_content(snapshot.thread_uri)
+        content = self._source_content(snapshot.source_path)
         return archive.content_contains_message_marker(content, snapshot)
 
     def remember(self, snapshot: Any) -> None:
-        content = self._content_by_uri.get(snapshot.thread_uri)
+        content = self._content_by_uri.get(snapshot.source_path)
         if content is None:
             return
 
@@ -87,34 +89,122 @@ class ExistingContentGuard:
                 "event_kind": snapshot.event_kind,
             }
         )
-        self._content_by_uri[snapshot.thread_uri] = f"{content}\n{marker}\n"
+        self._content_by_uri[snapshot.source_path] = f"{content}\n{marker}\n"
 
-    def _thread_content(self, uri: str) -> str:
-        if uri in self._content_by_uri:
-            return self._content_by_uri[uri]
+    def _source_content(self, path: str) -> str:
+        if path in self._content_by_uri:
+            return self._content_by_uri[path]
 
         if not hasattr(self.writer, "read"):
-            self._content_by_uri[uri] = ""
+            self._content_by_uri[path] = ""
             return ""
 
         try:
-            content = self.writer.read(uri)
+            content = self.writer.read(path)
             self.read_count += 1
-        except archive.OpenVikingReadError as exc:
+        except archive.SourceReadError as exc:
             self.read_count += 1
             if not exc.is_not_found:
-                LOGGER.warning("OpenViking read failed before backfill write: uri=%s error=%s", uri, exc)
+                LOGGER.warning("llmwiki source read failed before backfill write: path=%s error=%s", path, exc)
             content = ""
 
-        self._content_by_uri[uri] = content or ""
-        return self._content_by_uri[uri]
+        self._content_by_uri[path] = content or ""
+        return self._content_by_uri[path]
+
+
+class BatchLlmwikiSourceWriter:
+    def __init__(self, final_writer: Any, *, staging_parent: Path | str | None = None) -> None:
+        self.final_writer = final_writer
+        root = Path(getattr(final_writer, "root", archive.llmwiki_root()))
+        parent = Path(staging_parent) if staging_parent is not None else root / ".llmwiki" / "backfill-staging"
+        self.stage_dir = parent / f"run-{os.getpid()}-{uuid.uuid4().hex}"
+        self._staged_paths: dict[str, Path] = {}
+        self._first_snapshot_by_path: dict[str, Any] = {}
+        self._existing_content_by_path: dict[str, str] = {}
+        self._committed = False
+
+    def read(self, path: str) -> str:
+        if hasattr(self.final_writer, "read"):
+            return self.final_writer.read(path)
+        try:
+            return Path(path).read_text(encoding="utf-8")
+        except FileNotFoundError as exc:
+            raise archive.SourceReadError(f"source file not found: {path}", not_found=True) from exc
+
+    def write_snapshot(self, snapshot: Any) -> dict[str, Any]:
+        if self._committed:
+            raise BackfillError("cannot write to committed batch")
+
+        source_path = snapshot.source_path
+        stage_path = self._stage_path(snapshot)
+        stage_path.parent.mkdir(parents=True, exist_ok=True)
+
+        include_header = not self._has_source_content(source_path) and source_path not in self._staged_paths
+        with stage_path.open("a", encoding="utf-8") as stage_file:
+            stage_file.write(archive.render_source_append(snapshot, include_header=include_header))
+
+        self._staged_paths[source_path] = stage_path
+        self._first_snapshot_by_path.setdefault(source_path, snapshot)
+        return {"status": "staged", "path": source_path, "stage_path": str(stage_path)}
+
+    def commit(self) -> dict[str, int]:
+        if self._committed:
+            return {"files": 0}
+
+        written = 0
+        try:
+            for source_path, stage_path in sorted(self._staged_paths.items()):
+                staged_content = stage_path.read_text(encoding="utf-8")
+                if not staged_content:
+                    continue
+
+                final_path = Path(source_path)
+                final_path.parent.mkdir(parents=True, exist_ok=True)
+                final_content = read_file_or_empty(final_path)
+
+                if final_content:
+                    content_to_append = strip_rendered_thread_header(staged_content)
+                    if content_to_append:
+                        with final_path.open("a", encoding="utf-8") as final_file:
+                            final_file.write(content_to_append)
+                        written += 1
+                    continue
+
+                if not staged_content.startswith("# Slack Thread "):
+                    first_snapshot = self._first_snapshot_by_path.get(source_path)
+                    if first_snapshot is not None:
+                        staged_content = archive.render_source_file_header(first_snapshot) + staged_content
+
+                temp_path = final_path.with_name(f".{final_path.name}.backfill-{uuid.uuid4().hex}.tmp")
+                temp_path.write_text(staged_content, encoding="utf-8")
+                temp_path.replace(final_path)
+                written += 1
+        finally:
+            self._committed = True
+            shutil.rmtree(self.stage_dir, ignore_errors=True)
+
+        return {"files": written}
+
+    def _stage_path(self, snapshot: Any) -> Path:
+        name = clean_str(getattr(snapshot, "source_name", "")) or Path(snapshot.source_path).name
+        return self.stage_dir / name
+
+    def _has_source_content(self, source_path: str) -> bool:
+        if source_path not in self._existing_content_by_path:
+            try:
+                self._existing_content_by_path[source_path] = self.read(source_path)
+            except archive.SourceReadError as exc:
+                if not exc.is_not_found:
+                    raise
+                self._existing_content_by_path[source_path] = ""
+        return bool(self._existing_content_by_path[source_path])
 
 
 class SlackBackfill:
     def __init__(self, *, client: Any, archive_writer: Any, options: BackfillOptions) -> None:
         self.client = client
         self.writer = archive_writer
-        self.archive = archive.SlackVikingArchive(writer=archive_writer, max_workers=1)
+        self.archive = archive.SlackLlmwikiArchive(writer=archive_writer, max_workers=1)
         self.options = options
         self.guard = ExistingContentGuard(archive_writer)
         self.summary = BackfillSummary()
@@ -134,8 +224,20 @@ class SlackBackfill:
         finally:
             self.archive.shutdown()
 
+        self.commit_writer()
         self.summary.threads_read = self.guard.read_count
         return self.summary
+
+    def commit_writer(self) -> None:
+        commit = getattr(self.writer, "commit", None)
+        if not callable(commit):
+            return
+
+        try:
+            result = commit()
+            LOGGER.info("Slack llmwiki backfill published source files: %s", result.get("files", 0))
+        except Exception as exc:
+            raise BackfillError(f"failed to publish staged llmwiki sources: {exc}") from exc
 
     def iter_channels(self) -> Iterable[dict[str, Any]]:
         explicit_channels = self.options.channel_ids
@@ -230,7 +332,7 @@ class SlackBackfill:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Backfill bot-visible Slack channel messages into OpenViking thread resources."
+        description="Backfill bot-visible Slack channel messages into llmwiki source files."
     )
     parser.add_argument("--days", type=int, default=DEFAULT_DAYS)
     parser.add_argument("--history-limit", type=page_limit, default=DEFAULT_HISTORY_LIMIT)
@@ -383,8 +485,25 @@ def clean_str(value: Any) -> str:
     return str(value).strip()
 
 
+def read_file_or_empty(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return ""
+
+
+def strip_rendered_thread_header(content: str) -> str:
+    if not content.startswith("# Slack Thread "):
+        return content
+
+    message_start = content.find("\n## ")
+    if message_start < 0:
+        return ""
+    return content[message_start:]
+
+
 def load_archive_module() -> Any:
-    module_name = "phoenix_slack_viking_archive_runtime"
+    module_name = "phoenix_llmwiki_runtime"
     existing = sys.modules.get(module_name)
     if existing is not None:
         return existing
@@ -406,10 +525,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         options = options_from_args(args)
         client = create_slack_client(options.token)
-        writer = archive.OpenVikingContentWriter()
+        writer = BatchLlmwikiSourceWriter(archive.LlmwikiSourceWriter())
         summary = SlackBackfill(client=client, archive_writer=writer, options=options).run()
     except Exception as exc:
-        LOGGER.error("Slack OpenViking backfill failed: %s", exc)
+        LOGGER.error("Slack llmwiki backfill failed: %s", exc)
         print(json.dumps({"status": "error", "error": str(exc)}, sort_keys=True), file=sys.stderr)
         return 1
 

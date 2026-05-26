@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "defaultKind": "concept",
+  "kinds": {
+    "concept": {
+      "minWikilinks": 2,
+      "description": "Reusable company knowledge: policies, processes, playbooks, rituals, decisions, norms, customer insights, product knowledge, engineering knowledge, data definitions, recurring problems, and operating patterns. Extract durable knowledge from raw communication and tools. Prefer stable concepts over one-off chatter. Capture what is currently true, what changed, why it matters, who owns it, and where related knowledge lives. Add new concept areas when the source material reveals them; do not limit the wiki to predefined seed sections."
+    },
+    "entity": {
+      "minWikilinks": 2,
+      "description": "A specific named thing in the company graph: internal person, external person, team, customer, account, vendor, partner, investor, tool, Slack channel, workspace, project, repo, dashboard, dataset, document, integration, campaign, meeting, incident, feature, or initiative. For people, preserve internal/external status, role, organization, team, Slack user ID or handle if present, email if present, timezone/location if present, manager/reporting relationship if present, owned projects, expertise, decision authority, active commitments, and notable working preferences. For teams, preserve mission, members, lead, owned areas, channels, rituals, tools, dependencies, and current priorities. For tools/systems, preserve owner, purpose, URL/workspace, connected data, dashboards, alerts, integrations, access notes, and related playbooks. Never invent identifiers; use unknown when the source does not say."
+    },
+    "comparison": {
+      "minWikilinks": 3,
+      "description": "A grounded side-by-side analysis of two or more entities or concepts: tools, vendors, implementation approaches, customer segments, product ideas, roadmap options, architectural choices, or operating models. Preserve decision criteria, tradeoffs, current recommendation, owner, status, risks, alternatives considered, and source-backed rationale. Create comparison pages only when the source material contains real contrast or decision context."
+    },
+    "overview": {
+      "minWikilinks": 4,
+      "description": "A flexible map page for a company area. Organize and link related pages, but do not treat seed pages as a fixed table of contents. Add new sections, linked pages, categories, and subdirectories whenever the source material reveals recurring people, teams, tools, projects, processes, customers, metrics, decisions, rituals, incidents, or other durable company knowledge. Prefer compact tables for directories and status maps. If a section has no grounded content yet, say so explicitly rather than inventing filler."
+    }
+  },
+  "seedPages": [
+    {
+      "title": "Company Brain Overview",
+      "kind": "overview",
+      "summary": "Top-level starting map of the company wiki. This is not a fixed table of contents. Organize the wiki around whatever durable company knowledge appears in the ingested sources: teams, people, tools, projects, customers, processes, decisions, metrics, rituals, product knowledge, support knowledge, sales knowledge, engineering knowledge, operations knowledge, and any other recurring domain. Add new sections and linked pages when the company context demands it. Keep it grounded in source material; do not invent structure just to fill gaps.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Teams Directory",
+      "kind": "overview",
+      "summary": "Starting map of internal teams, functions, pods, working groups, ownership areas, Slack channels, rituals, current priorities, and dependencies. Use this as guidance, not a limit. Add new team-like groupings, ownership areas, and subsections when they appear repeatedly in Slack, tools, docs, tickets, meetings, or other sources.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Internal People",
+      "kind": "overview",
+      "summary": "Starting directory of internal teammates. Use this as guidance, not a limit. For each person page, preserve Slack user ID or Slack handle if present, role, team, ownership, timezone/location, manager, current projects, expertise, recurring responsibilities, active commitments, and communication preferences. Add new people groupings or subsections when useful, such as leadership, engineering, product, support, sales, operations, or temporary working groups.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "External People",
+      "kind": "overview",
+      "summary": "Starting directory of external people: customers, users, contractors, advisors, vendors, partners, investors, agencies, prospects, and support contacts. Use this as guidance, not a limit. Preserve Slack Connect IDs or handles, email, organization, relationship, owner, active threads, commitments, risks, and follow-ups when present. Add new external relationship categories when the source material reveals them.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Tools and Systems",
+      "kind": "overview",
+      "summary": "Starting inventory of company tools and systems such as Slack, PostHog, Linear, GitHub, CRM, docs, warehouse, support desk, analytics, billing, cloud, automation tools, and internal services. Use this as guidance, not a limit. Capture owner, purpose, URL/workspace, connected data, alerts, dashboards, reports, permissions, integrations, playbooks, and known issues. Add new tool categories when they emerge from connectors or communication.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Slack Channels and Workspaces",
+      "kind": "overview",
+      "summary": "Starting map of important Slack workspaces, channels, channel purpose, owners, participating teams, bots, alerts, recurring discussions, workflows, and decision patterns. Use this as guidance, not a limit. Add pages for channels, channel groups, recurring threads, announcement streams, customer channels, incident channels, project channels, and other communication surfaces when they contain durable company knowledge.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Projects and Initiatives",
+      "kind": "overview",
+      "summary": "Starting map of active, paused, shipped, and proposed projects. Use this as guidance, not a limit. Track owner, team, status, goals, deadlines, blockers, linked tools, tickets, repos, dashboards, related people, customers, decisions, and current next actions. Add new project categories or lifecycle sections when the company context demands it.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Processes and Playbooks",
+      "kind": "overview",
+      "summary": "Starting map of repeatable ways the company works: onboarding, support, incident response, product launches, reporting, customer follow-up, sales handoff, data review, release process, approval flows, hiring, vendor management, and security practices. Use this as guidance, not a limit. Add new playbooks and process areas when repeated behavior appears in the sources.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Customers and Accounts",
+      "kind": "overview",
+      "summary": "Starting map of customer and account knowledge: organizations, users, contracts, onboarding state, health, open issues, feature requests, support history, decision makers, champions, risks, expansion opportunities, and internal owner. Use this as guidance, not a limit. Add new customer segments, account types, lifecycle stages, or success patterns when they appear in the source material.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Product Knowledge",
+      "kind": "overview",
+      "summary": "Starting map of product knowledge: features, user problems, roadmap themes, product decisions, feedback, feature requests, known limitations, launches, experiments, positioning, and customer-facing behavior. Use this as guidance, not a limit. Add product areas, feature pages, market segments, and problem spaces when source material reveals them.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Engineering Knowledge",
+      "kind": "overview",
+      "summary": "Starting map of engineering knowledge: architecture, repos, services, APIs, integrations, data models, infrastructure, incidents, technical decisions, dependencies, environments, deployment flows, and known risks. Use this as guidance, not a limit. Add new technical domains, service maps, incident pages, and decision records when they emerge from tools or communication.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Metrics and Reporting",
+      "kind": "overview",
+      "summary": "Starting map of company metrics, dashboards, reports, definitions, owners, data sources, thresholds, anomalies, recurring interpretation patterns, and review cadence. Use this as guidance, not a limit. Add new metric categories, dashboards, source systems, or reporting rituals when they appear in connectors or communication.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Decisions and Open Questions",
+      "kind": "overview",
+      "summary": "Starting map of important decisions and unresolved questions. Use this as guidance, not a limit. Track decision owner, status, rationale, date or timeframe, alternatives considered, risks, follow-up commitments, and related people, teams, projects, customers, tools, or metrics. Add new decision areas when repeated decision context appears.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Operating Cadence and Rituals",
+      "kind": "overview",
+      "summary": "Starting map of recurring meetings, async rituals, weekly and monthly reporting loops, planning cadence, retros, standups, reviews, customer check-ins, incident reviews, and leadership rhythms. Use this as guidance, not a limit. Capture owner, participants, purpose, inputs, outputs, linked tools, and decisions produced by each ritual.",
+      "relatedSlugs": []
+    },
+    {
+      "title": "Source Coverage and Gaps",
+      "kind": "overview",
+      "summary": "Starting map of what knowledge sources are represented in the wiki and what is missing or weak. Use this as guidance, not a limit. Track connected tools, imported Slack workspaces and channels, docs, repos, dashboards, CRM/support systems, data freshness, known blind spots, low-confidence areas, and places where the wiki needs more evidence.",
+      "relatedSlugs": []
+    }
+  ]
+}

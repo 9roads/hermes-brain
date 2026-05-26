@@ -87,6 +87,15 @@ ensure_nori_slack_cli() {
   exit 1
 }
 
+ensure_llmwiki_cli() {
+  if command -v llmwiki >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo "[phoenix] llmwiki CLI is not available on PATH" >&2
+  exit 1
+}
+
 run_root_hermes() {
   HERMES_HOME="$data_root" HOME="$root_home_dir" "$@"
 }
@@ -124,6 +133,17 @@ ensure_nori_slack_skill() {
   fi
 
   echo "[phoenix] nori-slack-cli skill is missing from Hermes profile $profile_name" >&2
+  exit 1
+}
+
+ensure_llmwiki_skill() {
+  local skill_path="$profile_dir/skills/llmwiki-cli/SKILL.md"
+
+  if [ -f "$skill_path" ]; then
+    return 0
+  fi
+
+  echo "[phoenix] llmwiki-cli skill is missing from Hermes profile $profile_name" >&2
   exit 1
 }
 
@@ -168,123 +188,113 @@ PY
   kanban_board_exists
 }
 
+write_llmwiki_status() {
+  local status_file="$1"
+  local pid="$2"
+  local status="$3"
+  local message="${4:-}"
+
+  mkdir -p "$(dirname "$status_file")"
+  python3 - "$status_file" "$pid" "$status" "$message" "$PHOENIX_LLMWIKI_ROOT" "$llmwiki_log_file" <<'PY'
+import json
+import sys
+from datetime import datetime, timezone
+
+status_file, pid, status, message, root, log_file = sys.argv[1:7]
+payload = {
+    "status": status,
+    "pid": int(pid) if pid.isdigit() else None,
+    "message": message,
+    "root": root,
+    "log_path": log_file,
+    "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+}
+with open(status_file, "w", encoding="utf-8") as handle:
+    json.dump(payload, handle, indent=2, sort_keys=True)
+    handle.write("\n")
+PY
+}
+
+ensure_llmwiki_schema() {
+  local schema_path="$PHOENIX_LLMWIKI_ROOT/.llmwiki/schema.json"
+  local template_path="${PHOENIX_LLMWIKI_SCHEMA_TEMPLATE:-/opt/hermes/image_base/llmwiki/schema.json}"
+  local force_schema="${PHOENIX_LLMWIKI_SCHEMA_FORCE:-}"
+
+  if [ ! -f "$schema_path" ] || [ "$force_schema" = "1" ] || [ "$force_schema" = "true" ]; then
+    if [ ! -f "$template_path" ]; then
+      echo "[llmwiki] schema template missing: $template_path" >&2
+      exit 1
+    fi
+
+    cp "$template_path" "$schema_path"
+    echo "[llmwiki] Installed company schema at $schema_path"
+  fi
+
+  python3 - "$schema_path" <<'PY'
+import json
+import sys
+
+schema_path = sys.argv[1]
+try:
+    with open(schema_path, encoding="utf-8") as handle:
+        json.load(handle)
+except Exception as exc:
+    print(f"[llmwiki] invalid schema JSON at {schema_path}: {exc}", file=sys.stderr)
+    sys.exit(1)
+PY
+}
+
 ensure_composio_cli
 ensure_nori_slack_cli
+ensure_llmwiki_cli
 ensure_phoenix_profile
 ensure_nori_slack_skill
+ensure_llmwiki_skill
 ensure_phoenix_kanban_board
 
 export HERMES_HOME="$profile_dir"
 export HOME="$profile_home_dir"
 
-openviking_data_dir="${OPENVIKING_DATA_DIR:-$data_root/openviking}"
-openviking_workspace_dir="${OPENVIKING_WORKSPACE_DIR:-$openviking_data_dir/workspace}"
-openviking_config_file="${OPENVIKING_CONFIG_FILE:-$openviking_data_dir/ov.conf}"
-openviking_cli_config_file="${OPENVIKING_CLI_CONFIG_FILE:-$openviking_data_dir/ovcli.conf}"
-openviking_endpoint="${OPENVIKING_ENDPOINT:-http://127.0.0.1:1933}"
-openviking_server_bin="${OPENVIKING_SERVER_BIN:-openviking-server}"
-image_config_dir="/opt/hermes/openviking"
-log_dir="${OPENVIKING_LOG_DIR:-$data_root/logs}"
-log_file="${OPENVIKING_LOG_FILE:-$log_dir/openviking.log}"
-startup_timeout_seconds="${OPENVIKING_STARTUP_TIMEOUT_SECONDS:-90}"
+workspace_dir="${PHOENIX_WORKSPACE_DIR:-$data_root/workspace}"
+llmwiki_root="${PHOENIX_LLMWIKI_ROOT:-${LLMWIKI_ROOT:-$workspace_dir/company}}"
+llmwiki_log_dir="${PHOENIX_LLMWIKI_LOG_DIR:-$data_root/logs}"
+llmwiki_log_file="${PHOENIX_LLMWIKI_LOG_FILE:-$llmwiki_log_dir/llmwiki-watch.log}"
+llmwiki_status_file="${PHOENIX_LLMWIKI_STATUS_FILE:-$data_root/phoenix/llmwiki/watch-status.json}"
 
-mkdir -p "$openviking_data_dir" "$openviking_workspace_dir" "$log_dir"
+export PHOENIX_LLMWIKI_ROOT="$llmwiki_root"
+export LLMWIKI_ROOT="$llmwiki_root"
+export OPENAI_BASE_URL="${OPENAI_BASE_URL:-https://api.openai.com/v1}"
+export LLMWIKI_PROVIDER="${LLMWIKI_PROVIDER:-openai}"
+export LLMWIKI_MODEL="${LLMWIKI_MODEL:-gpt-5.5}"
+export LLMWIKI_EMBEDDING_MODEL="${LLMWIKI_EMBEDDING_MODEL:-text-embedding-3-small}"
 
-if [ ! -f "$openviking_config_file" ]; then
-  cp "$image_config_dir/ov.conf" "$openviking_config_file"
-  chmod 640 "$openviking_config_file" 2>/dev/null || true
-fi
+mkdir -p "$PHOENIX_LLMWIKI_ROOT/sources" "$PHOENIX_LLMWIKI_ROOT/wiki" "$PHOENIX_LLMWIKI_ROOT/.llmwiki" "$llmwiki_log_dir"
+ensure_llmwiki_schema
 
-if [ ! -f "$openviking_cli_config_file" ]; then
-  cp "$image_config_dir/ovcli.conf" "$openviking_cli_config_file"
-  chmod 640 "$openviking_cli_config_file" 2>/dev/null || true
-fi
-
-if [ -z "${OPENVIKING_ROOT_API_KEY:-}" ] && [ -n "${OPENVIKING_API_KEY:-}" ]; then
-  export OPENVIKING_ROOT_API_KEY="$OPENVIKING_API_KEY"
-fi
-
-if grep -q '\${OPENVIKING_ROOT_API_KEY}' "$openviking_config_file" \
-  && [ -z "${OPENVIKING_ROOT_API_KEY:-}" ]; then
-  echo "[openviking] OPENVIKING_ROOT_API_KEY is required for $openviking_config_file" >&2
-  exit 1
-fi
-
-if [ -n "${OPENVIKING_ROOT_API_KEY:-}" ] && [ -z "${OPENVIKING_API_KEY:-}" ]; then
-  export OPENVIKING_API_KEY="$OPENVIKING_ROOT_API_KEY"
-fi
-
-export OPENVIKING_CONFIG_FILE="$openviking_config_file"
-export OPENVIKING_CLI_CONFIG_FILE="$openviking_cli_config_file"
-export OPENVIKING_ENDPOINT="$openviking_endpoint"
-export OPENVIKING_ACCOUNT="${OPENVIKING_ACCOUNT:-default}"
-export OPENVIKING_USER_SPACE="${OPENVIKING_USER_SPACE:-default}"
-export OPENVIKING_USER="${OPENVIKING_USER:-$OPENVIKING_USER_SPACE}"
-export OPENVIKING_AGENT_ID="${OPENVIKING_AGENT_ID:-hermes-memory}"
-
-if ! command -v "$openviking_server_bin" >/dev/null 2>&1; then
-  if [ -x /opt/hermes/.venv/bin/openviking-server ]; then
-    openviking_server_bin="/opt/hermes/.venv/bin/openviking-server"
-  else
-    echo "[openviking] openviking-server is not available on PATH or in /opt/hermes/.venv/bin" >&2
-    exit 1
-  fi
-fi
-
-openviking_pid=""
-cleanup_openviking() {
-  if [ -n "$openviking_pid" ] && kill -0 "$openviking_pid" 2>/dev/null; then
-    kill "$openviking_pid" 2>/dev/null || true
-    wait "$openviking_pid" 2>/dev/null || true
+llmwiki_pid=""
+cleanup_llmwiki() {
+  if [ -n "$llmwiki_pid" ] && kill -0 "$llmwiki_pid" 2>/dev/null; then
+    kill "$llmwiki_pid" 2>/dev/null || true
+    wait "$llmwiki_pid" 2>/dev/null || true
   fi
 }
-trap cleanup_openviking EXIT INT TERM
+trap cleanup_llmwiki EXIT INT TERM
 
-echo "[openviking] Starting OpenViking on $openviking_endpoint"
-"$openviking_server_bin" --config "$openviking_config_file" >> "$log_file" 2>&1 &
-openviking_pid="$!"
+echo "[llmwiki] Starting llmwiki watch in $PHOENIX_LLMWIKI_ROOT"
+(
+  cd "$PHOENIX_LLMWIKI_ROOT"
+  exec llmwiki watch
+) >> "$llmwiki_log_file" 2>&1 &
+llmwiki_pid="$!"
+write_llmwiki_status "$llmwiki_status_file" "$llmwiki_pid" "running" ""
 
-wait_for_openviking() {
-  local deadline=$((SECONDS + startup_timeout_seconds))
-
-  while [ "$SECONDS" -lt "$deadline" ]; do
-    if ! kill -0 "$openviking_pid" 2>/dev/null; then
-      echo "[openviking] OpenViking exited before becoming healthy; see $log_file" >&2
-      exit 1
-    fi
-
-    if python3 - "$openviking_endpoint" <<'PY'
-import json
-import sys
-import urllib.request
-
-endpoint = sys.argv[1].rstrip("/")
-for path in ("/health", "/ready"):
-    try:
-        with urllib.request.urlopen(f"{endpoint}{path}", timeout=2) as response:
-            if response.status >= 400:
-                continue
-            data = json.loads(response.read().decode("utf-8"))
-            if data.get("status") in {"ok", "ready"} or data.get("healthy") is True:
-                sys.exit(0)
-    except Exception:
-        pass
-sys.exit(1)
-PY
-    then
-      echo "[openviking] OpenViking is healthy"
-      return 0
-    fi
-
-    sleep 1
-  done
-
-  echo "[openviking] Timed out waiting for OpenViking health; see $log_file" >&2
+sleep 1
+if ! kill -0 "$llmwiki_pid" 2>/dev/null; then
+  write_llmwiki_status "$llmwiki_status_file" "$llmwiki_pid" "failed" "llmwiki watch exited during startup"
+  echo "[llmwiki] llmwiki watch exited during startup; see $llmwiki_log_file" >&2
+  tail -40 "$llmwiki_log_file" >&2 || true
   exit 1
-}
-
-wait_for_openviking
-trap - EXIT INT TERM
+fi
 
 if [ "$#" -gt 0 ] && command -v "$1" >/dev/null 2>&1; then
   exec "$@"

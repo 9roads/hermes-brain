@@ -6,20 +6,19 @@ import sys
 import urllib.request
 
 DEFAULT_HERMES_HOME = "/opt/data/profiles/phoenix"
-DEFAULT_OPENVIKING_CONFIG_FILE = "/opt/data/openviking/ov.conf"
+DEFAULT_LLMWIKI_ROOT = "/opt/data/workspace/company"
+DEFAULT_LLMWIKI_STATUS_FILE = "/opt/data/phoenix/llmwiki/watch-status.json"
 
 
 api_key = os.environ.get("API_SERVER_KEY")
 port = os.environ.get("API_SERVER_PORT", "8642")
 home = os.environ.get("HERMES_HOME", DEFAULT_HERMES_HOME)
 state_path = os.path.join(home, "gateway_state.json")
-openviking_endpoint = (
-    os.environ.get("OPENVIKING_ENDPOINT") or "http://127.0.0.1:1933"
-).strip().rstrip("/")
-openviking_config_file = os.environ.get(
-    "OPENVIKING_CONFIG_FILE",
-    DEFAULT_OPENVIKING_CONFIG_FILE,
-)
+llmwiki_root = os.environ.get("PHOENIX_LLMWIKI_ROOT") or os.environ.get("LLMWIKI_ROOT") or DEFAULT_LLMWIKI_ROOT
+llmwiki_sources_dir = os.path.join(llmwiki_root, "sources")
+llmwiki_wiki_dir = os.path.join(llmwiki_root, "wiki")
+llmwiki_schema_file = os.path.join(llmwiki_root, ".llmwiki", "schema.json")
+llmwiki_status_file = os.environ.get("PHOENIX_LLMWIKI_STATUS_FILE", DEFAULT_LLMWIKI_STATUS_FILE)
 
 # 1. API health
 headers = {}
@@ -60,27 +59,38 @@ if bad_platforms:
     print(f"bad platforms: {bad_platforms}", file=sys.stderr)
     sys.exit(1)
 
-# 3. Company memory backend
-if not os.path.isfile(openviking_config_file):
-    print(f"openviking config missing: {openviking_config_file}", file=sys.stderr)
+# 3. Company wiki backend
+if not os.path.isdir(llmwiki_sources_dir):
+    print(f"llmwiki sources dir missing: {llmwiki_sources_dir}", file=sys.stderr)
     sys.exit(1)
 
-openviking_ok = False
-last_error = ""
+if not os.path.isdir(llmwiki_wiki_dir):
+    print(f"llmwiki wiki dir missing: {llmwiki_wiki_dir}", file=sys.stderr)
+    sys.exit(1)
 
-for health_path in ("/health", "/ready"):
-    try:
-        with urllib.request.urlopen(f"{openviking_endpoint}{health_path}", timeout=3) as r:
-            data = json.loads(r.read().decode())
-        if data.get("status") in {"ok", "ready"} or data.get("healthy") is True:
-            openviking_ok = True
-            break
-        last_error = f"bad {health_path}: {data}"
-    except Exception as e:
-        last_error = str(e)
+try:
+    with open(llmwiki_schema_file) as f:
+        json.load(f)
+except Exception as e:
+    print(f"cannot read llmwiki schema: {e}", file=sys.stderr)
+    sys.exit(1)
 
-if not openviking_ok:
-    print(f"openviking unhealthy at {openviking_endpoint}: {last_error}", file=sys.stderr)
+try:
+    with open(llmwiki_status_file) as f:
+        llmwiki_status = json.load(f)
+except Exception as e:
+    print(f"cannot read llmwiki watch status: {e}", file=sys.stderr)
+    sys.exit(1)
+
+watch_pid = llmwiki_status.get("pid")
+if llmwiki_status.get("status") != "running" or not isinstance(watch_pid, int) or watch_pid <= 0:
+    print(f"llmwiki watch not running: {llmwiki_status}", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    os.kill(watch_pid, 0)
+except Exception as e:
+    print(f"llmwiki watch pid unhealthy: {e}", file=sys.stderr)
     sys.exit(1)
 
 # 4. Phoenix connected-tool runtime
@@ -102,6 +112,10 @@ if not shutil.which("composio"):
 
 if not shutil.which("nori-slack"):
     print("nori-slack CLI is not available on PATH", file=sys.stderr)
+    sys.exit(1)
+
+if not shutil.which("llmwiki"):
+    print("llmwiki CLI is not available on PATH", file=sys.stderr)
     sys.exit(1)
 
 print("ok")

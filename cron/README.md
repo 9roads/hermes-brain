@@ -15,8 +15,8 @@ Reusable task templates:
 - `phoenix-ingestion-task-contract.md`: general producer/worker contract for Kanban-backed ingestion work such as `slack.person_profile`, `slack.channel_summary`, and `slack.thread_summary`.
 - `people-profile-crawl.md`: task body template for a `slack.person_profile` Kanban worker. This file is not scheduled as a cron job. Workers return one Markdown report and complete the card with that report as the Kanban result.
 
-The Phoenix Hermes image wrapper owns profile install/update, Composio CLI and
-nori-slack CLI availability, OpenViking startup, `nori-slack-cli` skill
-verification, and creation of the shared `phoenix-ingestion` board. Producer
-prompts assume that setup has already completed and should not create boards
-themselves.
+The Phoenix Hermes image wrapper owns profile install/update, Composio CLI,
+nori-slack CLI, llmwiki CLI availability, llmwiki watch startup,
+`nori-slack-cli` and `llmwiki-cli` skill verification, and creation of the
+shared `phoenix-ingestion` board. Producer prompts assume that setup has
+already completed and should not create boards themselves.

@@ -17,10 +17,10 @@ from typing import Any
 LOGGER = logging.getLogger(__name__)
 
 COMMAND_PREFIX = "slack-archive"
-DEFAULT_RUN_DIR = "/opt/data/phoenix/slack-viking-archive"
-RUN_DIR_ENV = "PHOENIX_SLACK_VIKING_ARCHIVE_RUN_DIR"
-LOG_FILE_ENV = "PHOENIX_SLACK_VIKING_ARCHIVE_LOG_FILE"
-STATUS_FILE_ENV = "PHOENIX_SLACK_VIKING_ARCHIVE_STATUS_FILE"
+DEFAULT_RUN_DIR = "/opt/data/phoenix/llmwiki"
+RUN_DIR_ENV = "PHOENIX_LLMWIKI_RUN_DIR"
+LOG_FILE_ENV = "PHOENIX_LLMWIKI_LOG_FILE"
+STATUS_FILE_ENV = "PHOENIX_LLMWIKI_STATUS_FILE"
 DEFAULT_DAYS = 60
 DEFAULT_HISTORY_LIMIT = 200
 DEFAULT_REPLY_LIMIT = 200
@@ -85,7 +85,9 @@ def usage() -> str:
     return (
         "Slack archive commands:\n"
         "/phoenix slack-archive backfill --days 60\n"
-        "/phoenix slack-archive status"
+        "/phoenix slack-archive status\n"
+        "\n"
+        "Archive destination: /opt/data/workspace/company/sources"
     )
 
 
@@ -231,7 +233,7 @@ def start_monitor_thread(
     thread = threading.Thread(
         target=monitor_backfill_process,
         args=(process, paths, argv, started_at),
-        name=f"slack-viking-backfill-monitor-{process.pid}",
+        name=f"slack-llmwiki-backfill-monitor-{process.pid}",
         daemon=True,
     )
     _MONITOR_THREADS.append(thread)
@@ -363,7 +365,7 @@ def ensure_run_dir(paths: RuntimePaths) -> None:
 def append_log_header(paths: RuntimePaths, argv: list[str], started_at: str) -> None:
     paths.log_path.parent.mkdir(parents=True, exist_ok=True)
     with paths.log_path.open("a", encoding="utf-8") as log_file:
-        log_file.write(f"\n[{started_at}] starting Slack OpenViking backfill\n")
+        log_file.write(f"\n[{started_at}] starting Slack llmwiki backfill\n")
         log_file.write("command: " + " ".join(shlex.quote(part) for part in safe_argv(argv)) + "\n")
 
 

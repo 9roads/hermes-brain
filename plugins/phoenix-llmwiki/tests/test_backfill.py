@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
+import tempfile
+import types
 import unittest
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
-RUNTIME_MODULE = "phoenix_slack_viking_archive_runtime"
+RUNTIME_MODULE = "phoenix_llmwiki_runtime"
 
 
-class SlackVikingBackfillTests(unittest.TestCase):
+class SlackLlmwikiBackfillTests(unittest.TestCase):
     def tearDown(self) -> None:
         runtime = sys.modules.get(RUNTIME_MODULE)
         if runtime is not None:
@@ -23,7 +27,7 @@ class SlackVikingBackfillTests(unittest.TestCase):
                 pass
 
         for name in list(sys.modules):
-            if name.startswith("phoenix_slack_viking_archive_backfill_test_") or name == RUNTIME_MODULE:
+            if name.startswith("phoenix_llmwiki_backfill_test_") or name == RUNTIME_MODULE:
                 sys.modules.pop(name, None)
 
     def test_selects_default_and_explicit_token_envs(self) -> None:
@@ -91,7 +95,10 @@ class SlackVikingBackfillTests(unittest.TestCase):
         client = FakeSlackClient(
             history_pages={
                 "C123": [
-                    {"messages": [{"ts": "1700000002.000000", "text": "new"}], "response_metadata": {"next_cursor": "h2"}},
+                    {
+                        "messages": [{"ts": "1700000002.000000", "text": "new"}],
+                        "response_metadata": {"next_cursor": "h2"},
+                    },
                     {"messages": [{"ts": "1700000001.000000", "text": "old"}], "response_metadata": {}},
                 ]
             }
@@ -106,9 +113,14 @@ class SlackVikingBackfillTests(unittest.TestCase):
         self.assertEqual(client.history_calls[0]["latest"], "1700000100.000000")
         self.assertTrue(client.history_calls[0]["inclusive"])
         self.assertEqual(client.history_calls[1]["cursor"], "h2")
-        thread_calls = [call for call in writer.calls if "/threads/" in call["uri"]]
-        self.assertIn("old", thread_calls[0]["content"])
-        self.assertIn("new", thread_calls[1]["content"])
+        self.assertIn("old", writer.calls[0]["content"])
+        self.assertIn("new", writer.calls[1]["content"])
+        self.assertTrue(
+            writer.calls[0]["path"].endswith("sources/slack-general-C123-2023-11-14-1700000001000000.md")
+        )
+        self.assertTrue(
+            writer.calls[1]["path"].endswith("sources/slack-general-C123-2023-11-14-1700000002000000.md")
+        )
 
     def test_fetches_replies_for_roots_and_skips_duplicate_root_reply(self) -> None:
         backfill = load_backfill_module()
@@ -176,11 +188,14 @@ class SlackVikingBackfillTests(unittest.TestCase):
         summary = runner.run_for_test_channel({"id": "C123", "name": "general"})
 
         self.assertEqual(summary.messages_written, 3)
-        thread_contents = [call["content"] for call in writer.calls if "/threads/" in call["uri"]]
-        self.assertEqual(len(thread_contents), 3)
-        self.assertIn("root", thread_contents[0])
-        self.assertIn("reply one", thread_contents[1])
-        self.assertIn("reply two", thread_contents[2])
+        self.assertEqual(len(writer.calls), 3)
+        self.assertEqual(len({call["path"] for call in writer.calls}), 1)
+        self.assertTrue(
+            writer.calls[0]["path"].endswith("sources/slack-general-C123-2023-11-14-1700000001000000.md")
+        )
+        self.assertIn("root", writer.calls[0]["content"])
+        self.assertIn("reply one", writer.calls[1]["content"])
+        self.assertIn("reply two", writer.calls[2]["content"])
 
     def test_skips_existing_message_markers_on_rerun(self) -> None:
         backfill = load_backfill_module()
@@ -188,7 +203,7 @@ class SlackVikingBackfillTests(unittest.TestCase):
         message = {"ts": "1700000001.000000", "text": "already archived"}
         snapshot = backfill.archive.snapshot_from_event(backfill.slack_event(channel, message, root_ts=message["ts"]))
         assert snapshot is not None
-        existing = backfill.archive.render_thread_header(snapshot) + backfill.archive.render_message_block(snapshot)
+        existing = backfill.archive.render_source_append(snapshot, include_header=True)
         client = FakeSlackClient(
             history_pages={
                 "C123": [
@@ -196,32 +211,120 @@ class SlackVikingBackfillTests(unittest.TestCase):
                 ]
             }
         )
-        writer = FakeWriter(backfill, existing={snapshot.thread_uri: existing})
+        writer = FakeWriter(backfill, existing={snapshot.source_path: existing})
         runner = backfill.SlackBackfill(client=client, archive_writer=writer, options=options(backfill))
 
         summary = runner.run_for_test_channel(channel)
 
         self.assertEqual(summary.messages_written, 0)
         self.assertEqual(summary.messages_skipped, 1)
-        self.assertEqual(writer.read_calls, [snapshot.thread_uri])
+        self.assertEqual(writer.read_calls, [snapshot.source_path])
         self.assertEqual(writer.calls, [])
 
-    def test_thread_create_conflict_falls_back_to_append_during_backfill(self) -> None:
+    def test_backfill_and_realtime_messages_render_identically(self) -> None:
+        backfill = load_backfill_module()
+        channel = {"id": "C123", "name": "general", "context_team_id": "T123"}
+        message = {
+            "team": "T123",
+            "ts": "1700000001.000000",
+            "thread_ts": "1700000000.000000",
+            "text": "same source text",
+            "user": "U123",
+            "user_name": "Jane",
+            "permalink": "https://example.slack.com/archives/C123/p1700000001000000",
+        }
+
+        backfill_snapshot = backfill.archive.snapshot_from_event(
+            backfill.slack_event(channel, message, root_ts=message["thread_ts"])
+        )
+        realtime_snapshot = backfill.archive.snapshot_from_event(
+            types.SimpleNamespace(
+                raw_message={
+                    **message,
+                    "channel": "C123",
+                    "channel_name": "general",
+                    "channel_type": "channel",
+                },
+                text=message["text"],
+                message_id=message["ts"],
+                source=types.SimpleNamespace(
+                    platform=types.SimpleNamespace(value="slack"),
+                    chat_id="C123",
+                    chat_type="channel",
+                    chat_name="general",
+                    user_id="U123",
+                    user_name="Jane",
+                    slack_team_id="T123",
+                ),
+            )
+        )
+
+        assert backfill_snapshot is not None
+        assert realtime_snapshot is not None
+        self.assertEqual(backfill_snapshot.source_path, realtime_snapshot.source_path)
+        self.assertEqual(
+            backfill.archive.render_source_append(backfill_snapshot, include_header=True),
+            backfill.archive.render_source_append(realtime_snapshot, include_header=True),
+        )
+
+    def test_batch_writer_stages_until_commit(self) -> None:
+        backfill = load_backfill_module()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.dict(os.environ, {"PHOENIX_LLMWIKI_ROOT": temp_dir}, clear=False):
+                writer = backfill.BatchLlmwikiSourceWriter(backfill.archive.LlmwikiSourceWriter(temp_dir))
+                snapshot = backfill.archive.snapshot_from_event(
+                    backfill.slack_event(
+                        {"id": "C123", "name": "general"},
+                        {"ts": "1700000001.000000", "text": "staged"},
+                        root_ts="1700000001.000000",
+                    )
+                )
+                assert snapshot is not None
+
+                writer.write_snapshot(snapshot)
+
+                self.assertFalse(Path(snapshot.source_path).exists())
+                self.assertTrue((writer.stage_dir / snapshot.source_name).exists())
+
+                result = writer.commit()
+
+                self.assertEqual(result["files"], 1)
+                self.assertFalse(writer.stage_dir.exists())
+                content = Path(snapshot.source_path).read_text(encoding="utf-8")
+                self.assertIn("staged", content)
+                self.assertIn("# Slack Thread general on 2023-11-14", content)
+
+    def test_run_publishes_staged_sources_after_backfill(self) -> None:
         backfill = load_backfill_module()
         client = FakeSlackClient(
+            list_pages=[{"channels": [{"id": "C123", "name": "general"}], "response_metadata": {}}],
             history_pages={
                 "C123": [
-                    {"messages": [{"ts": "1700000001.000000", "text": "root"}], "response_metadata": {}},
+                    {
+                        "messages": [{"ts": "1700000001.000000", "text": "published at end"}],
+                        "response_metadata": {},
+                    }
                 ]
-            }
+            },
         )
-        writer = FakeWriter(backfill, conflict_on_thread_create=True)
-        runner = backfill.SlackBackfill(client=client, archive_writer=writer, options=options(backfill))
 
-        summary = runner.run_for_test_channel({"id": "C123", "name": "general"})
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.dict(os.environ, {"PHOENIX_LLMWIKI_ROOT": temp_dir}, clear=False):
+                writer = backfill.BatchLlmwikiSourceWriter(backfill.archive.LlmwikiSourceWriter(temp_dir))
+                runner = backfill.SlackBackfill(client=client, archive_writer=writer, options=options(backfill))
 
-        self.assertEqual(summary.messages_written, 1)
-        self.assertEqual([call["mode"] for call in writer.calls], ["create", "create", "append"])
+                summary = runner.run()
+
+                source_path = (
+                    Path(temp_dir)
+                    / "sources"
+                    / "slack-general-C123-2023-11-14-1700000001000000.md"
+                )
+                self.assertEqual(summary.messages_written, 1)
+                self.assertTrue(source_path.exists())
+                self.assertFalse(writer.stage_dir.exists())
+                self.assertIn("published at end", source_path.read_text(encoding="utf-8"))
 
 
 class FakeSlackClient:
@@ -258,24 +361,23 @@ class FakeWriter:
         backfill: Any,
         *,
         existing: dict[str, str] | None = None,
-        conflict_on_thread_create: bool = False,
     ) -> None:
         self.backfill = backfill
         self.existing = existing or {}
-        self.conflict_on_thread_create = conflict_on_thread_create
         self.calls: list[dict[str, str]] = []
         self.read_calls: list[str] = []
 
-    def read(self, uri: str) -> str:
-        self.read_calls.append(uri)
-        if uri in self.existing:
-            return self.existing[uri]
-        raise self.backfill.archive.OpenVikingReadError("not found", status_code=404)
+    def read(self, path: str) -> str:
+        self.read_calls.append(path)
+        if path in self.existing:
+            return self.existing[path]
+        raise self.backfill.archive.SourceReadError("not found", not_found=True)
 
-    def write(self, uri: str, content: str, *, mode: str) -> dict[str, Any]:
-        self.calls.append({"uri": uri, "content": content, "mode": mode})
-        if self.conflict_on_thread_create and mode == "create" and "/threads/" in uri:
-            raise self.backfill.archive.OpenVikingWriteError("conflict", status_code=409)
+    def write_snapshot(self, snapshot: Any) -> dict[str, Any]:
+        existing = self.existing.get(snapshot.source_path, "")
+        content = self.backfill.archive.render_source_append(snapshot, include_header=not bool(existing))
+        self.existing[snapshot.source_path] = existing + content
+        self.calls.append({"path": snapshot.source_path, "content": content})
         return {"status": "ok"}
 
 
@@ -301,7 +403,7 @@ def run_for_test_channel(self: Any, channel: dict[str, Any]) -> Any:
 
 
 def load_backfill_module() -> Any:
-    module_name = f"phoenix_slack_viking_archive_backfill_test_{uuid.uuid4().hex}"
+    module_name = f"phoenix_llmwiki_backfill_test_{uuid.uuid4().hex}"
     spec = importlib.util.spec_from_file_location(module_name, PLUGIN_ROOT / "backfill.py")
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module

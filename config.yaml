@@ -31,7 +31,7 @@ plugins:
     - phoenix-slack-markdown-blocks
     - phoenix-slack-identity-context
     - phoenix-slack-thread-gate
-    - phoenix-slack-viking-archive
+    - phoenix-llmwiki
     - phoenix-slack-home
     - phoenix-slack-surface
     - phoenix-trigger-subscriptions
@@ -49,6 +49,7 @@ display:
   busy_input_mode: steer
   busy_ack_enabled: false
   interim_assistant_messages: false
+  status_messages: "off"
   platforms:
     slack:
       tool_progress: "off"
@@ -77,9 +78,8 @@ platforms:
         - phoenix
 
 memory:
-  provider: openviking_memory
-  memory_enabled: true
-  user_profile_enabled: true
+  memory_enabled: false
+  user_profile_enabled: false
   memory_char_limit: 2000
   user_char_limit: 1375
 

@@ -1,4 +1,4 @@
-# Phoenix Hermes OpenViking Image
+# Phoenix Hermes llmwiki Image
 
 This directory is image build source, not Hermes profile-distribution payload.
 `hermes/distribution.yaml` intentionally does not include `image_base/`.
@@ -6,38 +6,44 @@ This directory is image build source, not Hermes profile-distribution payload.
 Build the custom image from the repository root:
 
 ```bash
-docker build -t phoenix-hermes-openviking:local hermes/image_base
+docker build -t phoenix-hermes-llmwiki:local hermes/image_base
 ```
 
-Run it with a persistent `/opt/data` volume and an OpenViking root API key:
+Run it with a persistent `/opt/data` volume and OpenAI credentials:
 
 ```bash
 docker run --rm -it \
   -v phoenix-hermes-data:/opt/data \
   -e OPENAI_BASE_URL="$OPENAI_BASE_URL" \
   -e OPENAI_API_KEY="$OPENAI_API_KEY" \
-  -e OPENVIKING_ROOT_API_KEY="$OPENVIKING_ROOT_API_KEY" \
-  phoenix-hermes-openviking:local gateway run -v
+  phoenix-hermes-llmwiki:local gateway run -v
 ```
 
-On first boot, `/opt/data/openviking/ov.conf` and `ovcli.conf` are copied from
-the image only if missing. Runtime state, indexes, queues, resources, and
-memory files live under `/opt/data/openviking/`. The default OpenViking log is
-`/opt/data/logs/openviking.log`.
-
-The image installs OpenViking `0.3.19`, `httpx` `0.28.1`,
+The image installs `llm-wiki-compiler` `0.7.0`, `slack_sdk` `3.42.0`,
 `loisa-composio-cli` `0.1.3`, and `nori-slack-cli` `0.1.1`. On gateway startup,
-the image wrapper installs or updates the Phoenix Hermes profile, verifies the
-profile-owned `nori-slack-cli` skill exists, ensures the shared
-`phoenix-ingestion` Kanban board exists, starts OpenViking from
-`/opt/data/openviking`, and then runs the requested Hermes command. The
-`openviking_memory` provider is
-installed and the memory bundle is copied to
-`/opt/hermes/openviking/memory-bundle/`. The dedicated company custom schemas
-are still exposed to OpenViking at:
+the wrapper installs or updates the Phoenix Hermes profile, verifies the
+profile-owned `nori-slack-cli` and `llmwiki-cli` skills exist, ensures the shared
+`phoenix-ingestion` Kanban board exists, creates the llmwiki project at
+`/opt/data/workspace/company`, starts `llmwiki watch` from that directory, and
+then runs the requested Hermes command.
 
-- `/opt/hermes/openviking/company-memory/`
+Runtime llmwiki layout:
 
-The wrapper preserves the official Hermes entrypoint. Phoenix setup and
-OpenViking startup happen after the official entrypoint has bootstrapped
-`/opt/data` and dropped to the `hermes` user.
+- `/opt/data/workspace/company/sources/`: raw exported Slack sources
+- `/opt/data/workspace/company/wiki/`: compiled company wiki
+- `/opt/data/workspace/company/.llmwiki/`: compiler state, locks, and embeddings
+- `/opt/data/workspace/company/.llmwiki/schema.json`: Phoenix company wiki schema
+
+The image seeds `.llmwiki/schema.json` from
+`/opt/hermes/image_base/llmwiki/schema.json` when the project does not already
+have a schema. Set `PHOENIX_LLMWIKI_SCHEMA_FORCE=1` to reinstall the image
+schema over an existing runtime schema.
+
+Default llmwiki env:
+
+- `LLMWIKI_PROVIDER=openai`
+- `LLMWIKI_MODEL=gpt-5.5`
+- `LLMWIKI_EMBEDDING_MODEL=text-embedding-3-small`
+- `PHOENIX_LLMWIKI_ROOT=/opt/data/workspace/company`
+
+The default watch log is `/opt/data/logs/llmwiki-watch.log`.

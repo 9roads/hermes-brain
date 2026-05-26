@@ -19,6 +19,8 @@ class SlackSurfaceTests(unittest.TestCase):
                 name.startswith("phoenix_slack_surface_test_")
                 or name == "gateway"
                 or name.startswith("gateway.")
+                or name == "hermes_cli"
+                or name.startswith("hermes_cli.")
             ):
                 sys.modules.pop(name, None)
 
@@ -88,6 +90,14 @@ class SlackSurfaceTests(unittest.TestCase):
                 "Context: 88% to compaction (threshold: 50% of window).",
             )
         )
+        self.assertIsNone(
+            gateway_run._prepare_gateway_status_message(
+                types.SimpleNamespace(value="slack"),
+                "lifecycle",
+                "No response from provider for 300s (non-streaming, model: gpt-5.5). "
+                "Aborting call.",
+            )
+        )
 
     def test_preserves_non_compression_and_non_slack_status(self) -> None:
         gateway_run = install_gateway_run_stub()
@@ -118,6 +128,61 @@ class SlackSurfaceTests(unittest.TestCase):
                 "Compression summary failed.",
             ),
             "slack:warn:Compression summary failed.",
+        )
+        self.assertEqual(
+            gateway_run._prepare_gateway_status_message(
+                types.SimpleNamespace(value="slack"),
+                "lifecycle",
+                "Retrying in 2.6s (attempt 1/3)...",
+            ),
+            "slack:lifecycle:Retrying in 2.6s (attempt 1/3)...",
+        )
+
+    def test_suppresses_status_when_global_display_setting_is_off(self) -> None:
+        gateway_run = install_gateway_run_stub()
+        install_hermes_config_stub({"display": {"status_messages": "off"}})
+        plugin = load_plugin_module()
+
+        plugin.patch_gateway_status_messages()
+
+        self.assertIsNone(
+            gateway_run._prepare_gateway_status_message(
+                types.SimpleNamespace(value="slack"),
+                "lifecycle",
+                "Switching to fallback model.",
+            )
+        )
+        self.assertIsNone(
+            gateway_run._prepare_gateway_status_message(
+                types.SimpleNamespace(value="telegram"),
+                "warn",
+                "Compression summary failed.",
+            )
+        )
+
+    def test_suppresses_status_when_platform_display_setting_is_off(self) -> None:
+        gateway_run = install_gateway_run_stub()
+        install_hermes_config_stub(
+            {"display": {"platforms": {"slack": {"status_messages": "off"}}}}
+        )
+        plugin = load_plugin_module()
+
+        plugin.patch_gateway_status_messages()
+
+        self.assertIsNone(
+            gateway_run._prepare_gateway_status_message(
+                types.SimpleNamespace(value="slack"),
+                "warn",
+                "Compression summary failed.",
+            )
+        )
+        self.assertEqual(
+            gateway_run._prepare_gateway_status_message(
+                types.SimpleNamespace(value="telegram"),
+                "warn",
+                "Compression summary failed.",
+            ),
+            "telegram:warn:Compression summary failed.",
         )
 
 
@@ -156,6 +221,14 @@ def install_gateway_run_stub() -> types.ModuleType:
     sys.modules["gateway"] = gateway_module
     sys.modules["gateway.run"] = gateway_run
     return gateway_run
+
+
+def install_hermes_config_stub(config: dict[str, Any]) -> None:
+    hermes_module = types.ModuleType("hermes_cli")
+    config_module = types.ModuleType("hermes_cli.config")
+    config_module.load_config = lambda: config
+    sys.modules["hermes_cli"] = hermes_module
+    sys.modules["hermes_cli.config"] = config_module
 
 
 def load_plugin_module():

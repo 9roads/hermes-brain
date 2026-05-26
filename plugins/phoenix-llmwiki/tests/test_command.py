@@ -15,10 +15,10 @@ from unittest.mock import patch
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 
 
-class SlackVikingArchiveCommandTests(unittest.TestCase):
+class SlackLlmwikiArchiveCommandTests(unittest.TestCase):
     def tearDown(self) -> None:
         for name in list(sys.modules):
-            if name.startswith("phoenix_slack_viking_archive_command_test_"):
+            if name.startswith("phoenix_llmwiki_command_test_"):
                 sys.modules.pop(name, None)
 
     def test_ignores_non_archive_phoenix_args_and_shows_usage(self) -> None:
@@ -65,7 +65,7 @@ class SlackVikingArchiveCommandTests(unittest.TestCase):
             self.assertIn("backfill.py", " ".join(status["argv"]))
             self.assertEqual(paths.pid_path.read_text(encoding="utf-8").strip(), "1234")
             self.assertEqual(paths.lock_path.read_text(encoding="utf-8").strip(), "1234")
-            self.assertIn("starting Slack OpenViking backfill", paths.log_path.read_text(encoding="utf-8"))
+            self.assertIn("starting Slack llmwiki backfill", paths.log_path.read_text(encoding="utf-8"))
 
     def test_reports_already_running_process(self) -> None:
         command = load_command_module()
@@ -160,7 +160,7 @@ def fail_launch(*_args: Any, **_kwargs: Any) -> None:
 
 
 def load_command_module() -> Any:
-    module_name = f"phoenix_slack_viking_archive_command_test_{uuid.uuid4().hex}"
+    module_name = f"phoenix_llmwiki_command_test_{uuid.uuid4().hex}"
     spec = importlib.util.spec_from_file_location(module_name, PLUGIN_ROOT / "command.py")
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module

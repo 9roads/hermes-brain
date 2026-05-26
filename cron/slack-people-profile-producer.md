@@ -30,7 +30,7 @@ Execution environment:
 - Use `terminal` for local filesystem work only, including `mkdir -p`, reading the worker task template, and atomic JSON writes.
 - Use the `kanban` toolset directly for Kanban work.
 - Use the `nori-slack-cli` skill only for Slack user discovery.
-- Do not call OpenViking memory tools from cron.
+- Do not call llmwiki CLI commands from cron.
 - Do not use `delegate_task`.
 - Do not spawn Hermes CLI child processes.
 - Do not run profile scraping or research inside cron.

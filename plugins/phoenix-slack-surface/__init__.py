@@ -13,13 +13,15 @@ LOGGER = logging.getLogger(__name__)
 PHOENIX_COMMAND = "phoenix"
 PHOENIX_USAGE = "Use `/phoenix <message>` to ask Phoenix about this workspace."
 SLACK_ARCHIVE_COMMAND_PREFIX = "slack-archive"
-SLACK_ARCHIVE_COMMAND_MODULE = "phoenix_slack_viking_archive_command"
+SLACK_ARCHIVE_COMMAND_MODULE = "phoenix_llmwiki_command"
 STATUS_PATCH_MARKER = "__phoenix_slack_surface_status_patch__"
-SLACK_COMPRESSION_STATUS_MARKERS = (
+NOISY_SLACK_STATUS_MARKERS = (
     "Preflight compression",
     "Compacting context",
+    "No response from provider",
     "to compaction",
 )
+STATUS_MESSAGES_OFF_VALUES = {"0", "false", "no", "off", "disabled", "none"}
 
 
 def register(ctx: Any) -> None:
@@ -96,7 +98,7 @@ def load_slack_archive_command_module() -> Any | None:
     if existing is not None:
         return existing
 
-    plugin_path = Path(__file__).resolve().parents[1] / "phoenix-slack-viking-archive" / "command.py"
+    plugin_path = Path(__file__).resolve().parents[1] / "phoenix-llmwiki" / "command.py"
     if not plugin_path.exists():
         LOGGER.info("Slack archive command module is unavailable: missing %s", plugin_path)
         return None
@@ -128,7 +130,10 @@ def patch_gateway_status_messages() -> bool:
         return True
 
     def prepare_gateway_status_message(platform: Any, event_type: str, message: str) -> str | None:
-        if is_slack_compression_status(platform, event_type, message):
+        if is_status_messages_disabled(platform):
+            return None
+
+        if is_noisy_slack_status(platform, event_type, message):
             return None
 
         return original_prepare(platform, event_type, message)
@@ -142,12 +147,47 @@ def patch_gateway_status_messages() -> bool:
     return True
 
 
-def is_slack_compression_status(platform: Any, event_type: str, message: str) -> bool:
+def is_status_messages_disabled(platform: Any) -> bool:
+    value = resolve_display_setting(platform_value(platform), "status_messages")
+    return is_disabled_value(value)
+
+
+def resolve_display_setting(platform: str, setting: str) -> Any:
+    try:
+        from hermes_cli.config import load_config
+
+        config = load_config()
+    except Exception:
+        return None
+
+    display = config.get("display") if isinstance(config, dict) else None
+    if not isinstance(display, dict):
+        return None
+
+    platforms = display.get("platforms")
+    if isinstance(platforms, dict):
+        platform_display = platforms.get(platform)
+        if isinstance(platform_display, dict) and setting in platform_display:
+            return platform_display.get(setting)
+
+    return display.get(setting)
+
+
+def is_disabled_value(value: Any) -> bool:
+    if value is False:
+        return True
+    if value is None or value is True:
+        return False
+
+    return str(value).strip().lower() in STATUS_MESSAGES_OFF_VALUES
+
+
+def is_noisy_slack_status(platform: Any, event_type: str, message: str) -> bool:
     if platform_value(platform) != "slack" or str(event_type or "").lower() != "lifecycle":
         return False
 
     text = str(message or "")
-    return any(marker in text for marker in SLACK_COMPRESSION_STATUS_MARKERS)
+    return any(marker in text for marker in NOISY_SLACK_STATUS_MARKERS)
 
 
 def platform_value(platform: Any) -> str:
