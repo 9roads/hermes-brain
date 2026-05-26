@@ -4,6 +4,7 @@ ARG HERMES_BASE_IMAGE=nousresearch/hermes-agent:latest
 FROM ${HERMES_BASE_IMAGE}
 
 ARG SLACK_SDK_VERSION=3.42.0
+ARG TIKTOKEN_VERSION=0.13.0
 ARG COMPOSIO_CLI_VERSION=0.1.3
 ARG NORI_SLACK_CLI_VERSION=0.1.1
 ARG LLM_WIKI_COMPILER_REPO=https://github.com/Ryner01/llm-wiki-compiler.git
@@ -16,7 +17,9 @@ ARG PNPM_VERSION=10.18.3
 USER root
 
 RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
-      "slack_sdk==${SLACK_SDK_VERSION}" && \
+      "slack_sdk==${SLACK_SDK_VERSION}" \
+      "tiktoken==${TIKTOKEN_VERSION}" && \
+    /opt/hermes/.venv/bin/python -c 'import tiktoken' && \
     chown -R hermes:hermes /opt/hermes/.venv
 
 RUN set -eux; \

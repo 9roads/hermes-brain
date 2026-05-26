@@ -22,10 +22,11 @@ docker run --rm -it \
 
 The image installs `llm-wiki-compiler` directly from
 `https://github.com/Ryner01/llm-wiki-compiler.git`, plus `slack_sdk` `3.42.0`,
-`loisa-composio-cli` `0.1.3`, `nori-slack-cli` `0.1.1`, and the `hermes-lcm`
-plugin from `https://github.com/stephenschoettler/hermes-lcm.git`. The plugin is
-installed into `/opt/hermes/plugins/hermes-lcm` so it is available as a bundled
-Hermes plugin; the Phoenix profile enables `hermes-lcm` and selects
+`tiktoken` `0.13.0`, `loisa-composio-cli` `0.1.3`, `nori-slack-cli` `0.1.1`,
+and the `hermes-lcm` plugin from
+`https://github.com/stephenschoettler/hermes-lcm.git`. The plugin is installed
+into `/opt/hermes/plugins/hermes-lcm` so it is available as a bundled Hermes
+plugin; the Phoenix profile enables `hermes-lcm` and selects
 `context.engine: lcm`.
 
 On gateway startup, the wrapper installs or updates the Phoenix Hermes profile,
