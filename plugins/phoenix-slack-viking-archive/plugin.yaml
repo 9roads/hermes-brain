@@ -1,0 +1,8 @@
+name: phoenix-slack-viking-archive
+version: 0.1.0
+description: Real-time Slack channel thread archive writer for OpenViking resources.
+author: Phoenix
+provides_hooks:
+  - pre_gateway_dispatch
+requires_env:
+  - OPENVIKING_ENDPOINT

@@ -5,6 +5,7 @@ FROM ${HERMES_BASE_IMAGE}
 
 ARG OPENVIKING_VERSION=0.3.19
 ARG HTTPX_VERSION=0.28.1
+ARG SLACK_SDK_VERSION=3.42.0
 ARG COMPOSIO_CLI_VERSION=0.1.3
 ARG NORI_SLACK_CLI_VERSION=0.1.1
 ARG PNPM_VERSION=10.18.3
@@ -13,7 +14,8 @@ USER root
 
 RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
       "openviking==${OPENVIKING_VERSION}" \
-      "httpx==${HTTPX_VERSION}" && \
+      "httpx==${HTTPX_VERSION}" \
+      "slack_sdk==${SLACK_SDK_VERSION}" && \
     chown -R hermes:hermes /opt/hermes/.venv
 
 RUN set -eux; \

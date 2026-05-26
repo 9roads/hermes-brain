@@ -31,6 +31,7 @@ plugins:
     - phoenix-slack-markdown-blocks
     - phoenix-slack-identity-context
     - phoenix-slack-thread-gate
+    - phoenix-slack-viking-archive
     - phoenix-slack-home
     - phoenix-slack-surface
     - phoenix-trigger-subscriptions
