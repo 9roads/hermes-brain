@@ -61,7 +61,8 @@ RUN set -eux; \
     test -x /opt/hermes/llmwiki/node_modules/llm-wiki-compiler/dist/cli.js; \
     ln -sfn /opt/hermes/llmwiki/node_modules/llm-wiki-compiler/dist/cli.js /usr/local/bin/llmwiki; \
     llmwiki --version >/dev/null; \
-    chown -R hermes:hermes /opt/hermes/llmwiki
+    chown -R hermes:hermes /opt/hermes/llmwiki; \
+    mkdir -p /opt/hermes/image_base/llmwiki
 
 COPY --chmod=0755 docker/entrypoint.sh /opt/hermes/image_base/entrypoint.sh
 COPY --chmod=0755 docker/run-with-llmwiki.sh /opt/hermes/image_base/run-with-llmwiki.sh
