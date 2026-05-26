@@ -7,6 +7,7 @@ ARG SLACK_SDK_VERSION=3.42.0
 ARG COMPOSIO_CLI_VERSION=0.1.3
 ARG NORI_SLACK_CLI_VERSION=0.1.1
 ARG LLM_WIKI_COMPILER_VERSION=0.7.0
+ARG NODE_VERSION=24.16.0
 ARG PNPM_VERSION=10.18.3
 
 USER root
@@ -14,6 +15,21 @@ USER root
 RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
       "slack_sdk==${SLACK_SDK_VERSION}" && \
     chown -R hermes:hermes /opt/hermes/.venv
+
+RUN set -eux; \
+    arch="$(uname -m)"; \
+    case "$arch" in \
+      x86_64) node_arch="x64" ;; \
+      aarch64|arm64) node_arch="arm64" ;; \
+      *) echo "Unsupported Node.js architecture: $arch" >&2; exit 1 ;; \
+    esac; \
+    tmp_dir="$(mktemp -d)"; \
+    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" -o "$tmp_dir/node.tar.xz"; \
+    tar -xJf "$tmp_dir/node.tar.xz" -C /usr/local --strip-components=1; \
+    rm -rf "$tmp_dir"; \
+    node --version; \
+    npm --version; \
+    corepack --version
 
 RUN set -eux; \
     node -e 'const major = Number(process.versions.node.split(".")[0]); if (major < 24) { console.error(`Node >=24 is required, found ${process.versions.node}`); process.exit(1); }'; \
