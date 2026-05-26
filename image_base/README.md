@@ -9,7 +9,7 @@ Build the custom image from the repository root:
 docker build -t phoenix-hermes-llmwiki:local hermes/image_base
 ```
 
-Run it with a persistent `/opt/data` volume and OpenAI credentials:
+Run it with a persistent `/opt/data` volume and OpenAI-compatible credentials:
 
 ```bash
 docker run --rm -it \
@@ -19,7 +19,8 @@ docker run --rm -it \
   phoenix-hermes-llmwiki:local gateway run -v
 ```
 
-The image installs `llm-wiki-compiler` `0.7.0`, `slack_sdk` `3.42.0`,
+The image installs `llm-wiki-compiler` directly from
+`https://github.com/Ryner01/llm-wiki-compiler.git`, plus `slack_sdk` `3.42.0`,
 `loisa-composio-cli` `0.1.3`, and `nori-slack-cli` `0.1.1`. On gateway startup,
 the wrapper installs or updates the Phoenix Hermes profile, verifies the
 profile-owned `nori-slack-cli` and `llmwiki-cli` skills exist, ensures the shared
@@ -42,7 +43,9 @@ schema over an existing runtime schema.
 Default llmwiki env:
 
 - `LLMWIKI_PROVIDER=openai`
-- `LLMWIKI_MODEL=gpt-5.5`
+- `LLMWIKI_MODEL=deepseek-v4-pro`
+- `LLMWIKI_EXTRACT_MODEL=deepseek-v4-flash`
+- `LLMWIKI_EXTRACT_CONCURRENCY=10`
 - `LLMWIKI_EMBEDDING_MODEL=text-embedding-3-small`
 - `PHOENIX_LLMWIKI_ROOT=/opt/data/workspace/company`
 

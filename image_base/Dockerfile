@@ -6,7 +6,8 @@ FROM ${HERMES_BASE_IMAGE}
 ARG SLACK_SDK_VERSION=3.42.0
 ARG COMPOSIO_CLI_VERSION=0.1.3
 ARG NORI_SLACK_CLI_VERSION=0.1.1
-ARG LLM_WIKI_COMPILER_VERSION=0.7.0
+ARG LLM_WIKI_COMPILER_REPO=https://github.com/Ryner01/llm-wiki-compiler.git
+ARG LLM_WIKI_COMPILER_REF=main
 ARG NODE_VERSION=24.16.0
 ARG PNPM_VERSION=10.18.3
 
@@ -28,7 +29,6 @@ RUN set -eux; \
     tar -xJf "$tmp_dir/node.tar.xz" -C /usr/local --strip-components=1; \
     rm -rf "$tmp_dir"; \
     node --version; \
-    npm --version; \
     corepack --version
 
 RUN set -eux; \
@@ -54,13 +54,24 @@ RUN set -eux; \
     ln -sfn /opt/hermes/nori-slack-cli/node_modules/nori-slack-cli/dist/index.js /usr/local/bin/nori-slack; \
     nori-slack --help >/dev/null; \
     chown -R hermes:hermes /opt/hermes/nori-slack-cli; \
+    tmp_llmwiki="$(mktemp -d)"; \
+    git init "$tmp_llmwiki"; \
+    cd "$tmp_llmwiki"; \
+    git remote add origin "$LLM_WIKI_COMPILER_REPO"; \
+    git fetch --depth 1 origin "$LLM_WIKI_COMPILER_REF"; \
+    git checkout --detach FETCH_HEAD; \
+    pnpm install --no-lockfile --ignore-scripts; \
+    pnpm run build; \
     mkdir -p /opt/hermes/llmwiki; \
+    node -e 'const fs = require("fs"); const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")); fs.writeFileSync("/opt/hermes/llmwiki/package.json", JSON.stringify({ private: true, type: pkg.type, dependencies: pkg.dependencies }, null, 2) + "\n");'; \
+    cp -R dist /opt/hermes/llmwiki/dist; \
     cd /opt/hermes/llmwiki; \
-    printf '{"private":true,"dependencies":{"llm-wiki-compiler":"%s"}}\n' "$LLM_WIKI_COMPILER_VERSION" > package.json; \
-    pnpm install --prod --no-lockfile; \
-    test -x /opt/hermes/llmwiki/node_modules/llm-wiki-compiler/dist/cli.js; \
-    ln -sfn /opt/hermes/llmwiki/node_modules/llm-wiki-compiler/dist/cli.js /usr/local/bin/llmwiki; \
-    llmwiki --version >/dev/null; \
+    pnpm install --prod --no-lockfile --ignore-scripts; \
+    chmod 0755 /opt/hermes/llmwiki/dist/cli.js; \
+    test -x /opt/hermes/llmwiki/dist/cli.js; \
+    ln -sfn /opt/hermes/llmwiki/dist/cli.js /usr/local/bin/llmwiki; \
+    llmwiki --help >/dev/null; \
+    rm -rf "$tmp_llmwiki"; \
     chown -R hermes:hermes /opt/hermes/llmwiki; \
     mkdir -p /opt/hermes/image_base/llmwiki
 
@@ -72,7 +83,9 @@ RUN python3 -m json.tool /opt/hermes/image_base/llmwiki/schema.json >/dev/null
 
 ENV PHOENIX_LLMWIKI_ROOT=/opt/data/workspace/company
 ENV LLMWIKI_PROVIDER=openai
-ENV LLMWIKI_MODEL=gpt-5.5
+ENV LLMWIKI_MODEL=deepseek-v4-pro
+ENV LLMWIKI_EXTRACT_MODEL=deepseek-v4-flash
+ENV LLMWIKI_EXTRACT_CONCURRENCY=10
 ENV LLMWIKI_EMBEDDING_MODEL=text-embedding-3-small
 
 ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/opt/hermes/image_base/entrypoint.sh"]
