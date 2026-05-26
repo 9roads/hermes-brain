@@ -25,8 +25,12 @@ auxiliary:
     provider: main
     model: gpt-5.4-mini
 
+context:
+  engine: lcm
+
 plugins:
   enabled:
+    - hermes-lcm
     - phoenix-composio-session
     - phoenix-slack-markdown-blocks
     - phoenix-slack-identity-context

@@ -8,6 +8,8 @@ ARG COMPOSIO_CLI_VERSION=0.1.3
 ARG NORI_SLACK_CLI_VERSION=0.1.1
 ARG LLM_WIKI_COMPILER_REPO=https://github.com/Ryner01/llm-wiki-compiler.git
 ARG LLM_WIKI_COMPILER_REF=main
+ARG HERMES_LCM_PLUGIN_REPO=https://github.com/stephenschoettler/hermes-lcm.git
+ARG HERMES_LCM_PLUGIN_REF=c62de1978f8b1e7c8068f17b58b1737ff97e25b9
 ARG NODE_VERSION=24.16.0
 ARG PNPM_VERSION=10.18.3
 
@@ -69,11 +71,43 @@ RUN set -eux; \
     pnpm install --prod --no-lockfile --ignore-scripts; \
     chmod 0755 /opt/hermes/llmwiki/dist/cli.js; \
     test -x /opt/hermes/llmwiki/dist/cli.js; \
-    ln -sfn /opt/hermes/llmwiki/dist/cli.js /usr/local/bin/llmwiki; \
-    llmwiki --help >/dev/null; \
+    ln -sfn /opt/hermes/llmwiki/dist/cli.js /usr/local/bin/llmwiki-real; \
+    printf '%s\n' \
+      '#!/usr/bin/env bash' \
+      'set -Eeuo pipefail' \
+      'if [ -z "${DEEPSEEK_API_KEY:-}" ]; then' \
+      '  echo "DEEPSEEK_API_KEY is required for llmwiki" >&2' \
+      '  exit 1' \
+      'fi' \
+      'export OPENAI_API_KEY="$DEEPSEEK_API_KEY"' \
+      'export OPENAI_BASE_URL="https://api.deepseek.com"' \
+      'export LLMWIKI_PROVIDER="openai"' \
+      'export LLMWIKI_MODEL="deepseek-v4-pro"' \
+      'export LLMWIKI_EXTRACT_MODEL="deepseek-v4-flash"' \
+      'exec /usr/local/bin/llmwiki-real "$@"' \
+      > /usr/local/bin/llmwiki; \
+    chmod 0755 /usr/local/bin/llmwiki; \
+    DEEPSEEK_API_KEY=dummy llmwiki --help >/dev/null; \
     rm -rf "$tmp_llmwiki"; \
     chown -R hermes:hermes /opt/hermes/llmwiki; \
     mkdir -p /opt/hermes/image_base/llmwiki
+
+RUN set -eux; \
+    plugin_dir="/opt/hermes/plugins/hermes-lcm"; \
+    tmp_lcm="$(mktemp -d)"; \
+    git init "$tmp_lcm"; \
+    cd "$tmp_lcm"; \
+    git remote add origin "$HERMES_LCM_PLUGIN_REPO"; \
+    git fetch --depth 1 origin "$HERMES_LCM_PLUGIN_REF"; \
+    git checkout --detach FETCH_HEAD; \
+    mkdir -p /opt/hermes/plugins; \
+    rm -rf "$plugin_dir"; \
+    mkdir -p "$plugin_dir"; \
+    tar --exclude=.git --exclude=.github -cf - . | tar -xf - -C "$plugin_dir"; \
+    test -f "$plugin_dir/plugin.yaml"; \
+    test -f "$plugin_dir/__init__.py"; \
+    rm -rf "$tmp_lcm"; \
+    chown -R hermes:hermes "$plugin_dir"
 
 COPY --chmod=0755 docker/entrypoint.sh /opt/hermes/image_base/entrypoint.sh
 COPY --chmod=0755 docker/run-with-llmwiki.sh /opt/hermes/image_base/run-with-llmwiki.sh
