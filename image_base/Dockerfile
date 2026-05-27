@@ -1,8 +1,13 @@
 # syntax=docker/dockerfile:1
 
 ARG HERMES_BASE_IMAGE=nousresearch/hermes-agent:latest
+ARG NODE_VERSION=24.16.0
+ARG PNPM_VERSION=11.3.0
+
+FROM node:${NODE_VERSION}-bookworm-slim AS node_runtime
 FROM ${HERMES_BASE_IMAGE}
 
+ARG PNPM_VERSION
 ARG SLACK_SDK_VERSION=3.42.0
 ARG TIKTOKEN_VERSION=0.13.0
 ARG COMPOSIO_CLI_VERSION=0.1.3
@@ -14,6 +19,9 @@ ARG HERMES_LCM_PLUGIN_REF=c62de1978f8b1e7c8068f17b58b1737ff97e25b9
 
 USER root
 
+COPY --from=node_runtime /usr/local/bin/node /usr/local/bin/node
+COPY --from=node_runtime /usr/local/lib/node_modules/corepack /usr/local/lib/node_modules/corepack
+
 RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
       "slack_sdk==${SLACK_SDK_VERSION}" \
       "tiktoken==${TIKTOKEN_VERSION}" && \
@@ -21,10 +29,11 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
     chown -R hermes:hermes /opt/hermes/.venv
 
 RUN set -eux; \
+    ln -sfn ../lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack; \
     node --version; \
     corepack --version; \
     corepack enable; \
-    corepack prepare pnpm@latest --activate; \
+    corepack prepare "pnpm@${PNPM_VERSION}" --activate; \
     pnpm --version
 
 RUN set -eux; \
