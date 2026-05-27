@@ -28,6 +28,27 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
     /opt/hermes/.venv/bin/python -c 'import tiktoken' && \
     chown -R hermes:hermes /opt/hermes/.venv
 
+RUN /opt/hermes/.venv/bin/python - <<'PY'
+from pathlib import Path
+import py_compile
+
+import openai
+
+sdk_file = Path(openai.__file__).resolve().parent / "lib" / "_parsing" / "_responses.py"
+old = "for output in response.output:"
+new = "for output in (response.output or []):"
+source = sdk_file.read_text(encoding="utf-8")
+
+if new in source:
+    print(f"OpenAI Responses parser already patched: {sdk_file}")
+elif old in source:
+    sdk_file.write_text(source.replace(old, new, 1), encoding="utf-8")
+    py_compile.compile(str(sdk_file), doraise=True)
+    print(f"Patched OpenAI Responses parser for null terminal output: {sdk_file}")
+else:
+    raise SystemExit(f"OpenAI Responses parser patch target not found: {sdk_file}")
+PY
+
 RUN set -eux; \
     ln -sfn ../lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack; \
     node --version; \
