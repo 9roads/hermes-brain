@@ -101,7 +101,7 @@ def resolve_snapshot_roots(
 ) -> list[tuple[str, list[Path]]]:
     return [
         (
-            "user/memories",
+            "company/memories",
             [
                 workspace / "viking" / account / "user" / user_space / "memories",
                 workspace / "viking" / "local" / account / "user" / user_space / "memories",
@@ -135,6 +135,15 @@ def build_archive(snapshot_roots: list[tuple[str, list[Path]]]) -> bytes:
                 if not source_root.is_dir():
                     continue
 
+                add_directory(archive, archived_paths, output_root)
+
+                for directory_path in sorted(source_root.rglob("*")):
+                    if not should_include_directory(directory_path, source_root_resolved):
+                        continue
+
+                    rel_path = directory_path.relative_to(source_root).as_posix()
+                    add_directory(archive, archived_paths, f"{output_root}/{rel_path}")
+
                 for file_path in sorted(source_root.rglob("*")):
                     if not should_include_file(file_path, source_root_resolved):
                         continue
@@ -159,6 +168,34 @@ def build_archive(snapshot_roots: list[tuple[str, list[Path]]]) -> bytes:
                         )
 
     return buffer.getvalue()
+
+
+def add_directory(
+    archive: tarfile.TarFile, archived_paths: set[str], archive_path: str
+) -> None:
+    cleaned_path = archive_path.strip("/")
+    if not cleaned_path or cleaned_path in archived_paths:
+        return
+
+    tarinfo = tarfile.TarInfo(cleaned_path)
+    tarinfo.type = tarfile.DIRTYPE
+    tarinfo.mode = 0o755
+    tarinfo.mtime = 0
+    archive.addfile(tarinfo)
+    archived_paths.add(cleaned_path)
+
+
+def should_include_directory(directory_path: Path, root: Path) -> bool:
+    if directory_path.is_symlink() or not directory_path.is_dir():
+        return False
+
+    try:
+        resolved = directory_path.resolve(strict=True)
+        rel = resolved.relative_to(root)
+    except (OSError, ValueError):
+        return False
+
+    return not any(part.startswith(".") for part in rel.parts)
 
 
 def should_include_file(file_path: Path, root: Path) -> bool:
