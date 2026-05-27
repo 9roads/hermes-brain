@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG HERMES_BASE_IMAGE=nousresearch/hermes-agent:latest
+ARG HERMES_BASE_IMAGE=nousresearch/hermes-agent:sha-bec2250d2c8349fc85201bcd1aa39bcaa766a555
 ARG NODE_VERSION=24.16.0
 ARG PNPM_VERSION=11.3.0
 
