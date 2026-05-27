@@ -34,7 +34,6 @@ plugins:
     - hermes-lcm
     - phoenix-composio-session
     - phoenix-slack-markdown-blocks
-    - phoenix-slack-identity-context
     - phoenix-slack-thread-gate
     - phoenix-slack-home
     - phoenix-trigger-subscriptions
