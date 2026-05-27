@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import importlib
-import importlib.util
 import logging
-import sys
-from pathlib import Path
 from typing import Any
 
 
@@ -12,8 +9,6 @@ LOGGER = logging.getLogger(__name__)
 
 PHOENIX_COMMAND = "phoenix"
 PHOENIX_USAGE = "Use `/phoenix <message>` to ask Phoenix about this workspace."
-SLACK_ARCHIVE_COMMAND_PREFIX = "slack-archive"
-SLACK_ARCHIVE_COMMAND_MODULE = "phoenix_llmwiki_command"
 STATUS_PATCH_MARKER = "__phoenix_slack_surface_status_patch__"
 NOISY_SLACK_STATUS_MARKERS = (
     "Preflight compression",
@@ -29,10 +24,6 @@ def register(ctx: Any) -> None:
 
     def handle_phoenix(raw_args: str = "") -> str:
         raw_args = str(raw_args or "")
-        archive_response = handle_slack_archive_command(raw_args)
-        if archive_response is not None:
-            return archive_response
-
         if raw_args.strip():
             return "Phoenix is available from Slack with `/phoenix <message>`."
 
@@ -71,47 +62,6 @@ def register(ctx: Any) -> None:
         args_hint="<message>",
     )
     ctx.register_hook("pre_gateway_dispatch", pre_gateway_dispatch)
-
-
-def handle_slack_archive_command(raw_args: str) -> str | None:
-    stripped = str(raw_args or "").strip()
-    if not stripped:
-        return None
-
-    first_token = stripped.split(None, 1)[0].lower()
-    if first_token != SLACK_ARCHIVE_COMMAND_PREFIX:
-        return None
-
-    command_module = load_slack_archive_command_module()
-    if command_module is None:
-        return "Slack archive command is not available in this Hermes profile."
-
-    try:
-        return command_module.handle_command(stripped)
-    except Exception as exc:
-        LOGGER.warning("Slack archive command failed: %s", exc)
-        return "Slack archive command failed before it could start. Check Hermes logs."
-
-
-def load_slack_archive_command_module() -> Any | None:
-    existing = sys.modules.get(SLACK_ARCHIVE_COMMAND_MODULE)
-    if existing is not None:
-        return existing
-
-    plugin_path = Path(__file__).resolve().parents[1] / "phoenix-llmwiki" / "command.py"
-    if not plugin_path.exists():
-        LOGGER.info("Slack archive command module is unavailable: missing %s", plugin_path)
-        return None
-
-    spec = importlib.util.spec_from_file_location(SLACK_ARCHIVE_COMMAND_MODULE, plugin_path)
-    if spec is None or spec.loader is None:
-        LOGGER.info("Slack archive command module is unavailable: could not load %s", plugin_path)
-        return None
-
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[SLACK_ARCHIVE_COMMAND_MODULE] = module
-    spec.loader.exec_module(module)
-    return module
 
 
 def patch_gateway_status_messages() -> bool:

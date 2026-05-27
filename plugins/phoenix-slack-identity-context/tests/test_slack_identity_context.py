@@ -196,6 +196,36 @@ class SlackIdentityContextTests(unittest.TestCase):
         self.assertIn("only verified mention targets", prompt)
         self.assertIn("do not guess", prompt)
 
+    def test_mentioned_thread_reply_includes_prior_thread_image_files(self) -> None:
+        modules = install_hermes_stubs()
+        plugin = load_plugin_module()
+        plugin.register(types.SimpleNamespace())
+        adapter = modules.slack.SlackAdapter()
+
+        asyncio.run(
+            modules.slack.SlackAdapter._handle_slack_message(
+                adapter,
+                {
+                    "type": "message",
+                    "team": "T123",
+                    "channel": "C123",
+                    "channel_type": "channel",
+                    "thread_ts": "1700000000.000100",
+                    "ts": "1700000001.000200",
+                    "user": "U123",
+                    "text": "<@UBOT> read the screenshot",
+                    "files": [],
+                },
+            )
+        )
+
+        handled = adapter.handled_raw_events[0]
+        self.assertEqual([file["id"] for file in handled["files"]], ["F123"])
+        self.assertIn(
+            "[Prior thread image attachments included for context: IMG_6242]",
+            handled["text"],
+        )
+
 
 class FakeGatewayRunner:
     def __init__(self) -> None:
@@ -230,12 +260,30 @@ class FakeSlackAdapter:
     def __init__(self) -> None:
         self._bot_user_id = "UBOT"
         self._team_bot_user_ids = {"T123": "UBOT"}
+        self._mentioned_threads = set()
+        self._bot_message_ts = set()
+        self.handled_raw_events: list[dict[str, Any]] = []
 
     async def _resolve_user_name(self, user_id: str, chat_id: str = "") -> str:
         return {
             "U123": "Predrag",
             "UBOT": "Loisa",
         }.get(user_id, user_id)
+
+    async def _handle_slack_message(self, event: dict[str, Any]) -> None:
+        self.handled_raw_events.append(event)
+
+    def _get_client(self, _channel_id: str) -> "FakeSlackClient":
+        return FakeSlackClient()
+
+    def _has_active_session_for_thread(
+        self,
+        *,
+        channel_id: str,
+        thread_ts: str,
+        user_id: str,
+    ) -> bool:
+        return False
 
     async def _fetch_thread_context(
         self,
@@ -248,6 +296,38 @@ class FakeSlackAdapter:
         human_name = await self._resolve_user_name("U123", chat_id=channel_id)
         bot_name = await self._resolve_user_name("UBOT", chat_id=channel_id)
         return f"{human_name}: hello\n{bot_name}: previous assistant context"
+
+
+class FakeSlackClient:
+    async def conversations_replies(
+        self,
+        *,
+        channel: str,
+        ts: str,
+        limit: int,
+        inclusive: bool,
+    ) -> dict[str, Any]:
+        return {
+            "messages": [
+                {
+                    "ts": ts,
+                    "text": "Omg they are annoying",
+                    "files": [
+                        {
+                            "id": "F123",
+                            "name": "IMG_6242.png",
+                            "title": "IMG_6242",
+                            "mimetype": "image/png",
+                        }
+                    ],
+                },
+                {
+                    "ts": "1700000001.000200",
+                    "text": "<@UBOT> read the screenshot",
+                    "files": [],
+                },
+            ]
+        }
 
 
 class Platform(Enum):

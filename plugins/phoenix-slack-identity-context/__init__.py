@@ -16,6 +16,8 @@ ORIGINAL_PREPARE_ATTR = "_phoenix_slack_identity_context_original_prepare"
 ORIGINAL_SESSION_PROMPT_ATTR = "_phoenix_slack_identity_context_original_prompt"
 ORIGINAL_FETCH_THREAD_CONTEXT_ATTR = "_phoenix_slack_identity_context_original_fetch_thread_context"
 ORIGINAL_RESOLVE_USER_NAME_ATTR = "_phoenix_slack_identity_context_original_resolve_user_name"
+ORIGINAL_HANDLE_SLACK_MESSAGE_ATTR = "_phoenix_slack_identity_context_original_handle_slack_message"
+SLACK_THREAD_FILES_PATCH_MARKER = "__phoenix_slack_identity_context_thread_files_patched__"
 
 SLACK_ID_MARKER = "(Slack ID:"
 SLACK_USER_ID_RE = re.compile(r"^[UW][A-Z0-9]+$")
@@ -127,6 +129,7 @@ def patch_slack_adapter() -> bool:
 
     current_fetch = getattr(slack_adapter, "_fetch_thread_context", None)
     current_resolve = getattr(slack_adapter, "_resolve_user_name", None)
+    current_handle = getattr(slack_adapter, "_handle_slack_message", None)
     if current_fetch is None or current_resolve is None:
         LOGGER.info(
             "Slack identity context adapter patch unavailable: missing thread context methods"
@@ -135,13 +138,20 @@ def patch_slack_adapter() -> bool:
 
     fetch_patched = getattr(current_fetch, SLACK_PATCH_MARKER, False)
     resolve_patched = getattr(current_resolve, SLACK_PATCH_MARKER, False)
-    if fetch_patched and resolve_patched:
+    handle_patched = current_handle is None or getattr(
+        current_handle, SLACK_THREAD_FILES_PATCH_MARKER, False
+    )
+    if fetch_patched and resolve_patched and handle_patched:
         return True
 
     original_fetch = getattr(slack_adapter, ORIGINAL_FETCH_THREAD_CONTEXT_ATTR, current_fetch)
     original_resolve = getattr(slack_adapter, ORIGINAL_RESOLVE_USER_NAME_ATTR, current_resolve)
     setattr(slack_adapter, ORIGINAL_FETCH_THREAD_CONTEXT_ATTR, original_fetch)
     setattr(slack_adapter, ORIGINAL_RESOLVE_USER_NAME_ATTR, original_resolve)
+    original_handle = None
+    if current_handle is not None:
+        original_handle = getattr(slack_adapter, ORIGINAL_HANDLE_SLACK_MESSAGE_ATTR, current_handle)
+        setattr(slack_adapter, ORIGINAL_HANDLE_SLACK_MESSAGE_ATTR, original_handle)
 
     async def fetch_thread_context(self: Any, *args: Any, **kwargs: Any) -> Any:
         token = THREAD_CONTEXT_ADAPTER.set(self)
@@ -171,7 +181,181 @@ def patch_slack_adapter() -> bool:
     setattr(resolve_user_name, SLACK_PATCH_MARKER, True)
     slack_adapter._fetch_thread_context = fetch_thread_context
     slack_adapter._resolve_user_name = resolve_user_name
+
+    if original_handle is not None:
+
+        async def handle_slack_message(self: Any, event: Any, *args: Any, **kwargs: Any) -> Any:
+            await attach_prior_thread_image_files(self, event)
+            return await original_handle(self, event, *args, **kwargs)
+
+        setattr(handle_slack_message, SLACK_THREAD_FILES_PATCH_MARKER, True)
+        slack_adapter._handle_slack_message = handle_slack_message
     return True
+
+
+async def attach_prior_thread_image_files(adapter: Any, event: Any) -> None:
+    if not should_attach_prior_thread_images(adapter, event):
+        return
+
+    try:
+        files = await fetch_prior_thread_image_files(adapter, event)
+    except Exception as exc:
+        LOGGER.debug("Slack prior thread image fetch failed: %s", exc)
+        return
+
+    if not files:
+        return
+
+    existing_files = event.get("files")
+    if not isinstance(existing_files, list):
+        existing_files = []
+
+    existing_ids = {
+        clean_text(file.get("id")) for file in existing_files if isinstance(file, dict)
+    }
+    new_files = [file for file in files if clean_text(file.get("id")) not in existing_ids]
+    if not new_files:
+        return
+
+    event["files"] = [*existing_files, *new_files]
+    append_prior_thread_image_notice(event, new_files)
+
+
+def should_attach_prior_thread_images(adapter: Any, event: Any) -> bool:
+    if not isinstance(event, dict):
+        return False
+
+    if event.get("type") != "message":
+        return False
+
+    subtype = clean_text(event.get("subtype"))
+    if subtype in {"message_changed", "message_deleted", "bot_message"}:
+        return False
+
+    if event.get("bot_id"):
+        return False
+
+    channel_id = clean_text(event.get("channel"))
+    thread_ts = clean_text(event.get("thread_ts"))
+    ts = clean_text(event.get("ts"))
+    if not channel_id or not thread_ts or not ts or thread_ts == ts:
+        return False
+
+    team_id = clean_text(event.get("team") or event.get("team_id"))
+    bot_uid = bot_user_id(adapter, team_id)
+    text = clean_text(event.get("text"), max_length=12000)
+    if bot_uid and f"<@{bot_uid}>" in text:
+        return True
+
+    channel_type = clean_text(event.get("channel_type"))
+    if channel_type in {"im", "mpim"}:
+        return True
+
+    if thread_ts in getattr(adapter, "_mentioned_threads", set()):
+        return True
+
+    if thread_ts in getattr(adapter, "_bot_message_ts", set()):
+        return True
+
+    has_active = getattr(adapter, "_has_active_session_for_thread", None)
+    if callable(has_active):
+        try:
+            return bool(
+                has_active(
+                    channel_id=channel_id,
+                    thread_ts=thread_ts,
+                    user_id=clean_text(event.get("user")),
+                )
+            )
+        except Exception:
+            return False
+
+    return False
+
+
+async def fetch_prior_thread_image_files(
+    adapter: Any,
+    event: dict[str, Any],
+    *,
+    limit: int = 30,
+    max_files: int = 5,
+) -> list[dict[str, Any]]:
+    channel_id = clean_text(event.get("channel"))
+    thread_ts = clean_text(event.get("thread_ts"))
+    current_ts = clean_text(event.get("ts"))
+    if not channel_id or not thread_ts or not current_ts:
+        return []
+
+    get_client = getattr(adapter, "_get_client", None)
+    if not callable(get_client):
+        return []
+
+    client = get_client(channel_id)
+    replies = getattr(client, "conversations_replies", None)
+    if not callable(replies):
+        return []
+
+    result = await replies(channel=channel_id, ts=thread_ts, limit=limit + 1, inclusive=True)
+    messages = result.get("messages", []) if isinstance(result, dict) else []
+    files: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        if clean_text(message.get("ts")) == current_ts:
+            continue
+        for file in message.get("files") or []:
+            if not isinstance(file, dict) or not is_thread_context_image_file(file):
+                continue
+            file_id = clean_text(file.get("id"))
+            if file_id and file_id in seen:
+                continue
+            if file_id:
+                seen.add(file_id)
+            files.append(file)
+            if len(files) >= max_files:
+                return files
+
+    return files
+
+
+def is_thread_context_image_file(file: dict[str, Any]) -> bool:
+    mimetype = clean_text(file.get("mimetype")).lower()
+    if mimetype.startswith("image/"):
+        return True
+
+    filetype = clean_text(file.get("filetype")).lower()
+    if filetype in {"jpg", "jpeg", "png", "gif", "webp"}:
+        return True
+
+    name = clean_text(file.get("name") or file.get("title")).lower()
+    return name.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp"))
+
+
+def append_prior_thread_image_notice(event: dict[str, Any], files: list[dict[str, Any]]) -> None:
+    labels = []
+    for file in files:
+        label = clean_text(file.get("title") or file.get("name") or file.get("id"), max_length=120)
+        if label:
+            labels.append(label)
+
+    if not labels:
+        return
+
+    note = "[Prior thread image attachments included for context: " + ", ".join(labels) + "]"
+    text = clean_text(event.get("text"), max_length=12000)
+    event["text"] = f"{text}\n\n{note}" if text else note
+
+
+def bot_user_id(adapter: Any, team_id: Any = "") -> str:
+    team = clean_text(team_id)
+    team_bot_ids = getattr(adapter, "_team_bot_user_ids", None)
+    if isinstance(team_bot_ids, dict) and team:
+        team_bot_id = clean_text(team_bot_ids.get(team))
+        if team_bot_id:
+            return team_bot_id
+
+    return clean_text(getattr(adapter, "_bot_user_id", None))
 
 
 def should_decorate_inbound_source(owner: Any, source: Any) -> bool:

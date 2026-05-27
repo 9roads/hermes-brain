@@ -39,19 +39,6 @@ class SlackSurfaceTests(unittest.TestCase):
 
         self.assertEqual(result, {"action": "rewrite", "text": "check this"})
 
-    def test_routes_slack_archive_command_handler(self) -> None:
-        plugin = load_plugin_module()
-        plugin.load_slack_archive_command_module = lambda: types.SimpleNamespace(
-            handle_command=lambda raw_args: f"archive:{raw_args}"
-        )
-        ctx = FakePluginContext()
-
-        plugin.register(ctx)
-
-        response = ctx.commands["phoenix"]["handler"]("slack-archive status")
-
-        self.assertEqual(response, "archive:slack-archive status")
-
     def test_preserves_regular_phoenix_command_handler_response(self) -> None:
         plugin = load_plugin_module()
         ctx = FakePluginContext()
