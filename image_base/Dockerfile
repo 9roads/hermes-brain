@@ -11,8 +11,6 @@ ARG LLM_WIKI_COMPILER_REPO=https://github.com/Ryner01/llm-wiki-compiler.git
 ARG LLM_WIKI_COMPILER_REF=main
 ARG HERMES_LCM_PLUGIN_REPO=https://github.com/stephenschoettler/hermes-lcm.git
 ARG HERMES_LCM_PLUGIN_REF=c62de1978f8b1e7c8068f17b58b1737ff97e25b9
-ARG NODE_VERSION=24.16.0
-ARG PNPM_VERSION=10.18.3
 
 USER root
 
@@ -23,27 +21,16 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
     chown -R hermes:hermes /opt/hermes/.venv
 
 RUN set -eux; \
-    arch="$(uname -m)"; \
-    case "$arch" in \
-      x86_64) node_arch="x64" ;; \
-      aarch64|arm64) node_arch="arm64" ;; \
-      *) echo "Unsupported Node.js architecture: $arch" >&2; exit 1 ;; \
-    esac; \
-    tmp_dir="$(mktemp -d)"; \
-    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" -o "$tmp_dir/node.tar.xz"; \
-    tar -xJf "$tmp_dir/node.tar.xz" -C /usr/local --strip-components=1; \
-    rm -rf "$tmp_dir"; \
     node --version; \
-    corepack --version
+    corepack --version; \
+    corepack enable; \
+    corepack prepare pnpm@latest --activate; \
+    pnpm --version
 
 RUN set -eux; \
     node -e 'const major = Number(process.versions.node.split(".")[0]); if (major < 24) { console.error(`Node >=24 is required, found ${process.versions.node}`); process.exit(1); }'; \
-    if ! command -v pnpm >/dev/null 2>&1; then \
-      command -v corepack >/dev/null; \
-      corepack enable; \
-      corepack prepare "pnpm@${PNPM_VERSION}" --activate; \
-    fi; \
     command -v pnpm >/dev/null; \
+    pnpm --version; \
     mkdir -p /opt/hermes/composio-cli; \
     cd /opt/hermes/composio-cli; \
     printf '{"private":true,"dependencies":{"loisa-composio-cli":"%s"}}\n' "$COMPOSIO_CLI_VERSION" > package.json; \
