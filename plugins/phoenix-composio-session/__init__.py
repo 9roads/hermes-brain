@@ -6,20 +6,17 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from . import client, prompt_context, session_refresh, slack_context
+    from . import client, prompt_context, slack_context
 except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
     import client
     import prompt_context
-    import session_refresh
     import slack_context
 
 
 LOGGER = logging.getLogger(__name__)
 
 _bootstrapped_sessions: set[str] = set()
-_refresh_marker_initialized = False
-_refresh_marker_version: str | None = None
 
 
 def register(ctx: Any) -> None:
@@ -40,8 +37,6 @@ def register(ctx: Any) -> None:
     def pre_llm_call(*args: Any, **kwargs: Any) -> dict[str, str] | None:
         hook_kwargs = coerce_hook_kwargs(args, kwargs)
         session_id = slack_context.read_session_id(hook_kwargs) or "hermes_session_unknown"
-
-        refresh_bootstraps_if_marker_changed()
 
         if session_id in _bootstrapped_sessions:
             return None
@@ -64,24 +59,6 @@ def register(ctx: Any) -> None:
 
     ctx.register_hook("pre_gateway_dispatch", pre_gateway_dispatch)
     ctx.register_hook("pre_llm_call", pre_llm_call)
-
-
-def refresh_bootstraps_if_marker_changed() -> None:
-    global _refresh_marker_initialized, _refresh_marker_version
-
-    marker_version = session_refresh.read_refresh_marker_version()
-
-    if not _refresh_marker_initialized:
-        _refresh_marker_initialized = True
-        _refresh_marker_version = marker_version
-        return
-
-    if marker_version == _refresh_marker_version:
-        return
-
-    _refresh_marker_version = marker_version
-    _bootstrapped_sessions.clear()
-    prompt_context.clear_session_environment()
 
 
 def coerce_hook_kwargs(args: tuple[Any, ...], kwargs: dict[str, Any]) -> dict[str, Any]:
