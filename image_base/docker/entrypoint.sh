@@ -2,6 +2,6 @@
 set -euo pipefail
 
 official_entrypoint="/opt/hermes/docker/entrypoint.sh"
-llmwiki_runner="/opt/hermes/image_base/run-with-llmwiki.sh"
+openviking_runner="/opt/hermes/image_base/run-with-openviking.sh"
 
-exec "$official_entrypoint" "$llmwiki_runner" "$@"
+exec "$official_entrypoint" "$openviking_runner" "$@"

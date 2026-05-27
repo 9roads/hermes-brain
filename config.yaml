@@ -36,9 +36,7 @@ plugins:
     - phoenix-slack-markdown-blocks
     - phoenix-slack-identity-context
     - phoenix-slack-thread-gate
-    - phoenix-llmwiki
     - phoenix-slack-home
-    - phoenix-slack-surface
     - phoenix-trigger-subscriptions
     - phoenix-openai-text-verbosity
   entries:
@@ -83,7 +81,8 @@ platforms:
         - phoenix
 
 memory:
-  memory_enabled: false
+  provider: openviking_memory
+  memory_enabled: true
   user_profile_enabled: false
   memory_char_limit: 2000
   user_char_limit: 1375

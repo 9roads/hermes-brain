@@ -1,6 +1,6 @@
 name: phoenix
-version: 0.2.73
-description: Phoenix llmwiki Hermes profile
+version: 0.2.76
+description: Phoenix OpenViking Hermes profile
 distribution_owned:
   # image_base/ is image build source and must not be installed as profile payload.
   - SOUL.md

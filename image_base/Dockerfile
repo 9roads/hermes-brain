@@ -8,12 +8,12 @@ FROM node:${NODE_VERSION}-bookworm-slim AS node_runtime
 FROM ${HERMES_BASE_IMAGE}
 
 ARG PNPM_VERSION
+ARG OPENVIKING_VERSION=0.3.19
+ARG HTTPX_VERSION=0.28.1
 ARG SLACK_SDK_VERSION=3.42.0
 ARG TIKTOKEN_VERSION=0.13.0
 ARG COMPOSIO_CLI_VERSION=0.1.3
 ARG NORI_SLACK_CLI_VERSION=0.1.1
-ARG LLM_WIKI_COMPILER_REPO=https://github.com/Ryner01/llm-wiki-compiler.git
-ARG LLM_WIKI_COMPILER_REF=main
 ARG HERMES_LCM_PLUGIN_REPO=https://github.com/stephenschoettler/hermes-lcm.git
 ARG HERMES_LCM_PLUGIN_REF=c62de1978f8b1e7c8068f17b58b1737ff97e25b9
 
@@ -23,9 +23,22 @@ COPY --from=node_runtime /usr/local/bin/node /usr/local/bin/node
 COPY --from=node_runtime /usr/local/lib/node_modules/corepack /usr/local/lib/node_modules/corepack
 
 RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
+      "openviking==${OPENVIKING_VERSION}" \
+      "httpx==${HTTPX_VERSION}" \
       "slack_sdk==${SLACK_SDK_VERSION}" \
       "tiktoken==${TIKTOKEN_VERSION}" && \
-    /opt/hermes/.venv/bin/python -c 'import tiktoken' && \
+    test -x /opt/hermes/.venv/bin/python && \
+    test -x /opt/hermes/.venv/bin/openviking && \
+    test -x /opt/hermes/.venv/bin/ov && \
+    ln -sfn /opt/hermes/.venv/bin/python /usr/local/bin/python && \
+    ln -sfn /opt/hermes/.venv/bin/openviking /usr/local/bin/openviking && \
+    ln -sfn /opt/hermes/.venv/bin/ov /usr/local/bin/ov && \
+    export PATH="/opt/hermes/.venv/bin:$PATH" && \
+    hash -r && \
+    python -c 'import tiktoken' && \
+    python --version && \
+    openviking --version && \
+    ov --version && \
     chown -R hermes:hermes /opt/hermes/.venv
 
 RUN /opt/hermes/.venv/bin/python - <<'PY'
@@ -75,42 +88,7 @@ RUN set -eux; \
     test -x /opt/hermes/nori-slack-cli/node_modules/nori-slack-cli/dist/index.js; \
     ln -sfn /opt/hermes/nori-slack-cli/node_modules/nori-slack-cli/dist/index.js /usr/local/bin/nori-slack; \
     nori-slack --help >/dev/null; \
-    chown -R hermes:hermes /opt/hermes/nori-slack-cli; \
-    tmp_llmwiki="$(mktemp -d)"; \
-    git init "$tmp_llmwiki"; \
-    cd "$tmp_llmwiki"; \
-    git remote add origin "$LLM_WIKI_COMPILER_REPO"; \
-    git fetch --depth 1 origin "$LLM_WIKI_COMPILER_REF"; \
-    git checkout --detach FETCH_HEAD; \
-    pnpm install --no-lockfile --ignore-scripts; \
-    pnpm run build; \
-    mkdir -p /opt/hermes/llmwiki; \
-    node -e 'const fs = require("fs"); const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")); fs.writeFileSync("/opt/hermes/llmwiki/package.json", JSON.stringify({ private: true, type: pkg.type, dependencies: pkg.dependencies }, null, 2) + "\n");'; \
-    cp -R dist /opt/hermes/llmwiki/dist; \
-    cd /opt/hermes/llmwiki; \
-    pnpm install --prod --no-lockfile --ignore-scripts; \
-    chmod 0755 /opt/hermes/llmwiki/dist/cli.js; \
-    test -x /opt/hermes/llmwiki/dist/cli.js; \
-    ln -sfn /opt/hermes/llmwiki/dist/cli.js /usr/local/bin/llmwiki-real; \
-    printf '%s\n' \
-      '#!/usr/bin/env bash' \
-      'set -Eeuo pipefail' \
-      'if [ -z "${DEEPSEEK_API_KEY:-}" ]; then' \
-      '  echo "DEEPSEEK_API_KEY is required for llmwiki" >&2' \
-      '  exit 1' \
-      'fi' \
-      'export OPENAI_API_KEY="$DEEPSEEK_API_KEY"' \
-      'export OPENAI_BASE_URL="https://api.deepseek.com"' \
-      'export LLMWIKI_PROVIDER="openai"' \
-      'export LLMWIKI_MODEL="deepseek-v4-pro"' \
-      'export LLMWIKI_EXTRACT_MODEL="deepseek-v4-flash"' \
-      'exec /usr/local/bin/llmwiki-real "$@"' \
-      > /usr/local/bin/llmwiki; \
-    chmod 0755 /usr/local/bin/llmwiki; \
-    DEEPSEEK_API_KEY=dummy llmwiki --help >/dev/null; \
-    rm -rf "$tmp_llmwiki"; \
-    chown -R hermes:hermes /opt/hermes/llmwiki; \
-    mkdir -p /opt/hermes/image_base/llmwiki
+    chown -R hermes:hermes /opt/hermes/nori-slack-cli
 
 RUN set -eux; \
     plugin_dir="/opt/hermes/plugins/hermes-lcm"; \
@@ -130,16 +108,14 @@ RUN set -eux; \
     chown -R hermes:hermes "$plugin_dir"
 
 COPY --chmod=0755 docker/entrypoint.sh /opt/hermes/image_base/entrypoint.sh
-COPY --chmod=0755 docker/run-with-llmwiki.sh /opt/hermes/image_base/run-with-llmwiki.sh
-COPY --chmod=0644 llmwiki/schema.json /opt/hermes/image_base/llmwiki/schema.json
+COPY --chown=hermes:hermes plugins/memory/openviking_memory/ /opt/hermes/plugins/memory/openviking_memory/
+COPY --chown=hermes:hermes openviking/custom-memory/ /opt/hermes/openviking/custom-memory/
+COPY --chown=hermes:hermes openviking/ov.conf openviking/ovcli.conf /opt/hermes/openviking/
+COPY --chmod=0755 docker/run-with-openviking.sh /opt/hermes/image_base/run-with-openviking.sh
 
-RUN python3 -m json.tool /opt/hermes/image_base/llmwiki/schema.json >/dev/null
-
-ENV PHOENIX_LLMWIKI_ROOT=/opt/data/workspace/company
-ENV LLMWIKI_PROVIDER=openai
-ENV LLMWIKI_MODEL=deepseek-v4-pro
-ENV LLMWIKI_EXTRACT_MODEL=deepseek-v4-flash
-ENV LLMWIKI_EXTRACT_CONCURRENCY=10
-ENV LLMWIKI_EMBEDDING_MODEL=text-embedding-3-small
+ENV OPENVIKING_ENDPOINT=http://127.0.0.1:1933
+ENV OPENVIKING_ACCOUNT=default
+ENV OPENVIKING_USER_SPACE=default
+ENV OPENVIKING_AGENT_ID=hermes-memory
 
 ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/opt/hermes/image_base/entrypoint.sh"]

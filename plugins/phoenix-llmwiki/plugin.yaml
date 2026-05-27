@@ -1,6 +1,0 @@
-name: phoenix-llmwiki
-version: 0.1.0
-description: Slack source exporter for the Phoenix llmwiki company project.
-author: Phoenix
-provides_hooks:
-  - pre_gateway_dispatch

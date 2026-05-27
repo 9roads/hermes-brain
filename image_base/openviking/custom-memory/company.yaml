@@ -1,0 +1,31 @@
+memory_type: company
+description: |
+  # Task Objective
+  Company profile memory - captures stable, shared facts about the company or
+  workspace Loisa is serving.
+
+  # Rules
+  - Record durable company identity and operating context only.
+  - Include stable facts such as company name, product, business model, market,
+    teams, operating principles, ownership model, and canonical links.
+  - Keep the result complete but compact.
+  - Use bullets or short sections.
+  - Include dates for changeable facts in the format: (as of 2026-05-27).
+  - Do not store secrets, private personal details, gossip, performance
+    criticism, or raw provider payloads.
+  - Do not use this for transient events or one-off decisions; use native event
+    or entity memories when they fit better.
+  - Preserve source references when the fact came from a specific source.
+directory: "viking://user/{{ user_space }}/memories"
+filename_template: "company.md"
+enabled: true
+operation_mode: "upsert"
+fields:
+  - name: content
+    type: string
+    description: |
+      Company profile content in Markdown format. Rewrite the full company
+      profile as a complete but compact shared context record. This is not a
+      personal user profile.
+    merge_op: patch
+    searchable: true
