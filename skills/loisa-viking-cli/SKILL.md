@@ -18,6 +18,8 @@ Phoenix installs OpenViking in the Hermes image and exposes both `ov` and
 `openviking` on `PATH`. Prefer the short `ov` command. Use `openviking` only if
 `ov` is unavailable.
 
+Dont output full paths to resources and memories. Just output simple things like "Added content to resources" etc and only if explicitly asked for path output without viking:// prefix. Prefer short, human-friendly messages over raw CLI output.
+
 ## Configuration
 
 The runtime sets OpenViking connection details before Hermes starts:

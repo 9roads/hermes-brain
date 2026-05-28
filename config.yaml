@@ -6,7 +6,7 @@ model:
   api_mode: codex_responses
 
 approvals:
-  mode: smart
+  mode: off
 
 terminal:
   cwd: /opt/data/workspace

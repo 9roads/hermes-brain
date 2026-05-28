@@ -24,10 +24,13 @@ directly to Slack with that real bot token.
 
 The Phoenix Hermes image installs pinned `loisa-composio-cli` and `nori-slack-cli` at build time, exposing `composio` and `nori-slack` on `PATH`. The image wrapper maps legacy `SLACK_TOKEN` to `SLACK_BOT_TOKEN` when needed and verifies the profile-owned `nori-slack-cli` skill is installed.
 
+Phoenix runs Hermes in trusted Daytona sandboxes, so `config.yaml` sets `approvals.mode: off`. Hermes docs define this as skipping terminal approval checks, equivalent to `HERMES_YOLO_MODE=true`; switch it back to `smart` or `manual` for non-sandboxed or user-owned hosts.
+
 Reference docs:
 
 - [Profiles: Running Multiple Agents](https://hermes-agent.nousresearch.com/docs/user-guide/profiles)
 - [Profile Distributions: Share a Whole Agent](https://hermes-agent.nousresearch.com/docs/user-guide/profile-distributions)
+- [Configuration: Smart Approvals](https://hermes-agent.nousresearch.com/docs/user-guide/configuration#smart-approvals)
 - [Working with Skills](https://hermes-agent.nousresearch.com/docs/guides/work-with-skills/)
 - [here.now docs](https://here.now/docs)
 
