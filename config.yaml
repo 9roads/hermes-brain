@@ -204,5 +204,10 @@ tts:
     model: gpt-4o-mini-tts
     voice: alloy
 
+stt:
+  provider: openai
+  openai:
+    model: whisper-1
+
 browser:
   cloud_provider: browserbase
