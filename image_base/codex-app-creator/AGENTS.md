@@ -13,7 +13,7 @@ These instructions apply to this project directory.
 ## Project Root
 
 - Treat this directory as the project root.
-- Keep source, generated assets, screenshots, temporary scaffolds, build output, and `.herenow/state.json` under this directory.
+- Keep source, generated assets, screenshots, temporary scaffolds, build output, and publish scratch files under this directory.
 - Do not create sibling project directories or store coding data outside this directory.
 
 ## Package Manager
@@ -88,29 +88,22 @@ For visual apps, inspect a local preview when practical. Fix blank screens,
 console errors, broken responsive layouts, missing assets, and state persistence
 issues before deployment.
 
-## Deploy To here.now
+## Simple Anonymous Deploy To here.now
 
 After a successful build, publish `dist/` to here.now from the project root.
-Use SPA mode when the app has client-side routes.
+Use SPA mode when the app has client-side routes. Keep this flow simple:
+anonymous static deploy only. Do not use here.now account auth, Drive, custom
+domain, payment, password, update, or API-key flows unless the user explicitly
+asks for one of those features later.
 
 ```bash
 PROFILE_NAME="${PHOENIX_HERMES_PROFILE_NAME:-phoenix}"
 PROFILE_DIR="${HERMES_HOME:-/opt/data/profiles/$PROFILE_NAME}"
-PUBLISH="$PROFILE_DIR/skills/static-site-publishing/scripts/publish.sh"
+PUBLISH="$PROFILE_DIR/skills/codex-app-creator/scripts/publish.sh"
 test -x "$PUBLISH"
 
-SLUG=""
-if [ -f .herenow/state.json ] && command -v jq >/dev/null 2>&1; then
-  SLUG="$(jq -r '.publishes | keys[0] // empty' .herenow/state.json)"
-fi
-
-if [ -n "$SLUG" ]; then
-  bash "$PUBLISH" dist --slug "$SLUG" --client hermes --spa
-else
-  bash "$PUBLISH" dist --client hermes --spa
-fi
+bash "$PUBLISH" dist --client hermes --spa
 ```
 
-Report the final `siteUrl` from the publish output and whether the publish is
-anonymous or authenticated. If the publish is anonymous and a claim URL is
-returned, include it.
+Report the final `siteUrl` from the publish output. Anonymous sites expire in 24
+hours; include the claim URL only if the publish output returns one.

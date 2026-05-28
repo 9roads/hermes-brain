@@ -1,6 +1,6 @@
 ---
 name: codex-app-creator
-description: Use for any task that requires programming, coding, implementation, code edits, debugging, app creation, website creation, UI work, feature work, validation, or redeployment. Delegates coding work to Codex CLI.
+description: Use for any task that requires programming, coding, implementation, code edits, debugging, app creation, website creation, UI work, feature work, validation, redeployment, or publishing a simple static site. Delegates coding work to Codex CLI.
 ---
 
 # Codex App Creator
@@ -31,7 +31,8 @@ cp "$AGENTS_TEMPLATE" "$PROJECT_DIR/AGENTS.md"
 
 For a new project, do not create any other files before invoking Codex. The
 project `AGENTS.md` is the source of truth for Vite, npm, shadcn/ui,
-browser-local state, static build output, and here.now deployment rules.
+browser-local state, static build output, and simple anonymous here.now
+deployment.
 
 ## Existing Projects
 
@@ -72,14 +73,35 @@ Read ./AGENTS.md first, then implement the user's coding request in this
 directory.
 
 Use the project AGENTS.md rules for package manager, Vite bootstrapping,
-shadcn/ui setup, browser-only persistence, static build validation, and here.now
-deployment. If the user's request cannot be satisfied as a static frontend app,
-report the blocker and offer the closest browser-only alternative. Keep all
-generated project data inside this directory.
+shadcn/ui setup, browser-only persistence, static build validation, and simple
+anonymous here.now deployment. If the user's request cannot be satisfied as a
+static frontend app, report the blocker and offer the closest browser-only
+alternative. Keep all generated project data inside this directory.
 
-After implementation, run the required validation and deploy to here.now. Report
-changed files, validation results, and the final siteUrl.
+After implementation, run the required validation and deploy the static build to
+here.now anonymously. Report changed files, validation results, the final
+siteUrl, and the anonymous expiry/claim URL if the publish output provides one.
 ```
+
+## Simple Anonymous Static Deploy
+
+Static publishing is part of this skill. Do not load a separate publishing skill
+or use here.now account, Drive, custom domain, auth, payment, password, or update
+flows for normal app-creator work.
+
+Use only the bundled publish helper after `npm run build` succeeds:
+
+```bash
+PROFILE_NAME="${PHOENIX_HERMES_PROFILE_NAME:-phoenix}"
+PROFILE_DIR="${HERMES_HOME:-/opt/data/profiles/$PROFILE_NAME}"
+PUBLISH="$PROFILE_DIR/skills/codex-app-creator/scripts/publish.sh"
+test -x "$PUBLISH"
+
+bash "$PUBLISH" dist --client hermes --spa
+```
+
+This creates a fresh anonymous site. Anonymous sites expire in 24 hours unless
+the publish output includes a claim URL and the user claims it.
 
 ## Handoff
 

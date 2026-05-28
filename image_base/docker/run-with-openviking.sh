@@ -75,6 +75,30 @@ export HERMES_PROFILE_DISTRIBUTION_REPO="$profile_distribution_repo"
 
 mkdir -p "$root_home_dir" "$profile_home_dir" "$root_bin_dir" "$profile_bin_dir" "$codex_home"
 
+ensure_hermes_cli() {
+  local system_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+  if ! command -v hermes >/dev/null 2>&1; then
+    echo "[hermes] hermes CLI is not available on PATH" >&2
+    exit 1
+  fi
+
+  if ! hermes --help >/dev/null 2>&1; then
+    echo "[hermes] hermes CLI failed to run" >&2
+    exit 1
+  fi
+
+  if ! /opt/hermes/hermes --help >/dev/null 2>&1; then
+    echo "[hermes] /opt/hermes/hermes failed to run" >&2
+    exit 1
+  fi
+
+  if ! PATH="$system_path" hermes --help >/dev/null 2>&1; then
+    echo "[hermes] hermes CLI is not available from the system PATH" >&2
+    exit 1
+  fi
+}
+
 ensure_python() {
   if command -v python >/dev/null 2>&1; then
     return 0
@@ -229,6 +253,7 @@ else:
 PY
 }
 
+ensure_hermes_cli
 ensure_python
 ensure_openviking_cli
 ensure_composio_cli

@@ -30,15 +30,26 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
       "slack_sdk==${SLACK_SDK_VERSION}" \
       "tiktoken==${TIKTOKEN_VERSION}" && \
     test -x /opt/hermes/.venv/bin/python && \
+    test -x /opt/hermes/.venv/bin/hermes && \
     test -x /opt/hermes/.venv/bin/openviking && \
     test -x /opt/hermes/.venv/bin/ov && \
-    ln -sfn /opt/hermes/.venv/bin/python /usr/local/bin/python && \
+    printf '%s\n' '#!/bin/sh' 'exec /opt/hermes/.venv/bin/python "$@"' > /usr/local/bin/python && \
+    chmod 0755 /usr/local/bin/python && \
+    printf '%s\n' '#!/bin/sh' 'exec /opt/hermes/.venv/bin/hermes "$@"' > /usr/local/bin/hermes && \
+    chmod 0755 /usr/local/bin/hermes && \
+    printf '%s\n' '#!/bin/sh' 'exec /opt/hermes/.venv/bin/hermes "$@"' > /opt/hermes/hermes && \
+    chmod 0755 /opt/hermes/hermes && \
     ln -sfn /opt/hermes/.venv/bin/openviking /usr/local/bin/openviking && \
     ln -sfn /opt/hermes/.venv/bin/ov /usr/local/bin/ov && \
     export PATH="/opt/hermes/.venv/bin:$PATH" && \
     hash -r && \
     python -c 'import tiktoken' && \
+    /usr/local/bin/python -c 'import tiktoken' && \
     python --version && \
+    hermes --help >/dev/null && \
+    /usr/local/bin/hermes --help >/dev/null && \
+    /opt/hermes/hermes --help >/dev/null && \
+    PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" hermes --help >/dev/null && \
     openviking --version && \
     ov --version && \
     chown -R hermes:hermes /opt/hermes/.venv
