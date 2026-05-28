@@ -138,6 +138,20 @@ ensure_nori_slack_cli() {
   exit 1
 }
 
+ensure_bun_cli() {
+  if ! command -v bun >/dev/null 2>&1; then
+    echo "[phoenix] bun CLI is not available on PATH" >&2
+    exit 1
+  fi
+
+  if ! command -v bunx >/dev/null 2>&1; then
+    echo "[phoenix] bunx CLI is not available on PATH" >&2
+    exit 1
+  fi
+
+  bun --version >/dev/null
+}
+
 ensure_codex_cli() {
   if command -v codex >/dev/null 2>&1; then
     return 0
@@ -153,6 +167,36 @@ toml_string() {
   value="${value//\\/\\\\}"
   value="${value//\"/\\\"}"
   printf '"%s"' "$value"
+}
+
+write_bunfig() {
+  local config_file="$1"
+  local tmp_file="$config_file.tmp.$$"
+
+  mkdir -p "$(dirname "$config_file")"
+
+  {
+    printf '[install]\n'
+    printf 'linker = "isolated"\n'
+    printf 'globalStore = true\n'
+    printf '\n'
+    printf '[install.cache]\n'
+    printf 'dir = %s\n' "$(toml_string "$BUN_INSTALL_CACHE_DIR")"
+    printf 'disable = false\n'
+    printf 'disableManifest = false\n'
+  } > "$tmp_file"
+
+  mv "$tmp_file" "$config_file"
+  chmod 0644 "$config_file" 2>/dev/null || true
+}
+
+configure_bun() {
+  export BUN_INSTALL_CACHE_DIR="${BUN_INSTALL_CACHE_DIR:-$data_root/bun/install/cache}"
+  export BUN_INSTALL_GLOBAL_STORE="${BUN_INSTALL_GLOBAL_STORE:-1}"
+
+  mkdir -p "$BUN_INSTALL_CACHE_DIR"
+  write_bunfig "$root_home_dir/.bunfig.toml"
+  write_bunfig "$profile_home_dir/.bunfig.toml"
 }
 
 configure_codex_cli() {
@@ -258,6 +302,8 @@ ensure_python
 ensure_openviking_cli
 ensure_composio_cli
 ensure_nori_slack_cli
+ensure_bun_cli
+configure_bun
 ensure_codex_cli
 configure_codex_cli
 ensure_phoenix_profile

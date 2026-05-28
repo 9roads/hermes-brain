@@ -2,11 +2,14 @@
 
 ARG HERMES_BASE_IMAGE=nousresearch/hermes-agent:sha-bec2250d2c8349fc85201bcd1aa39bcaa766a555
 ARG NODE_VERSION=24.16.0
+ARG BUN_VERSION=1.3.14
 ARG PNPM_VERSION=11.3.0
 
 FROM node:${NODE_VERSION}-bookworm-slim AS node_runtime
+FROM oven/bun:${BUN_VERSION}-debian AS bun_runtime
 FROM ${HERMES_BASE_IMAGE}
 
+ARG BUN_VERSION
 ARG PNPM_VERSION
 ARG OPENVIKING_VERSION=0.3.19
 ARG HTTPX_VERSION=0.28.1
@@ -23,6 +26,7 @@ USER root
 COPY --from=node_runtime /usr/local/bin/node /usr/local/bin/node
 COPY --from=node_runtime /usr/local/lib/node_modules/corepack /usr/local/lib/node_modules/corepack
 COPY --from=node_runtime /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+COPY --from=bun_runtime /usr/local/bin/bun /usr/local/bin/bun
 
 RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
       "openviking==${OPENVIKING_VERSION}" \
@@ -99,9 +103,13 @@ RUN set -eux; \
     ln -sfn ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm; \
     ln -sfn ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx; \
     ln -sfn ../lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack; \
+    ln -sfn /usr/local/bin/bun /usr/local/bin/bunx; \
     node --version; \
     npm --version; \
     npx --version; \
+    bun --version; \
+    bun --revision; \
+    bunx --version >/dev/null; \
     corepack --version; \
     corepack enable; \
     corepack prepare "pnpm@${PNPM_VERSION}" --activate; \
@@ -152,14 +160,13 @@ RUN set -eux; \
     chown -R hermes:hermes "$plugin_dir"
 
 COPY --chmod=0755 docker/codex /usr/local/bin/codex
-COPY --chown=hermes:hermes codex-app-creator/ /opt/hermes/image_base/codex-app-creator/
 COPY --chmod=0755 docker/entrypoint.sh /opt/hermes/image_base/entrypoint.sh
 COPY --chown=hermes:hermes plugins/memory/openviking_memory/ /opt/hermes/plugins/memory/openviking_memory/
 COPY --chown=hermes:hermes openviking/custom-memory/ /opt/hermes/openviking/custom-memory/
 COPY --chown=hermes:hermes openviking/ov.conf openviking/ovcli.conf /opt/hermes/openviking/
 COPY --chmod=0755 docker/run-with-openviking.sh /opt/hermes/image_base/run-with-openviking.sh
 
-ENV PHOENIX_CODEX_APP_CREATOR_AGENTS=/opt/hermes/image_base/codex-app-creator/AGENTS.md
+ENV BUN_INSTALL_GLOBAL_STORE=1
 ENV OPENVIKING_ENDPOINT=http://127.0.0.1:1933
 ENV OPENVIKING_ACCOUNT=default
 ENV OPENVIKING_USER_SPACE=default

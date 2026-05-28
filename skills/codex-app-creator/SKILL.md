@@ -7,12 +7,11 @@ description: Use for any task that requires programming, coding, implementation,
 
 Use this skill whenever the user asks Hermes to do programming work. Hermes is
 the orchestrator, not the coding agent: it creates or locates the project
-directory, ensures the project has app-creator instructions in `AGENTS.md`, and
-delegates implementation, validation, and deployment to Codex CLI.
+directory, initializes Bun React/shadcn app projects when needed, and delegates
+implementation, validation, and deployment to Codex CLI.
 
-Hermes does not scaffold Vite, install packages, initialize shadcn/ui, edit app
-code, or deploy manually for new projects. Codex reads the copied `AGENTS.md` and
-does that work inside the project.
+Hermes does not edit app code or deploy manually for new projects. New static
+frontend app projects are bootstrapped with Bun before Codex starts.
 
 ## Bootstrap A New Project
 
@@ -23,24 +22,29 @@ under `/opt/data/workspace/<project>`.
 WORKSPACE=/opt/data/workspace
 PROJECT=my-dashboard
 PROJECT_DIR="$WORKSPACE/$PROJECT"
-AGENTS_TEMPLATE="${PHOENIX_CODEX_APP_CREATOR_AGENTS:-/opt/hermes/image_base/codex-app-creator/AGENTS.md}"
 
 mkdir -p "$PROJECT_DIR"
-cp "$AGENTS_TEMPLATE" "$PROJECT_DIR/AGENTS.md"
+cd "$PROJECT_DIR"
+
+if [ ! -f package.json ]; then
+  bun init --react=shadcn --yes
+  bunx --bun skills add shadcn/ui --yes
+  test -f .agents/skills/shadcn/SKILL.md
+fi
 ```
 
-For a new project, do not create any other files before invoking Codex. The
-project `AGENTS.md` is the source of truth for Vite, npm, shadcn/ui,
-browser-local state, static build output, and simple anonymous here.now
-deployment.
+For a new project, do not create a custom Phoenix `AGENTS.md` or other
+Phoenix-specific instruction files before invoking Codex. Bun's React/shadcn
+template plus the shadcn skill install are the project baseline. Leave those
+generated files in place.
 
 ## Existing Projects
 
 Work on an existing project when the user explicitly points to it. If the
-project lacks `AGENTS.md`, copy the same template there before invoking Codex. If
-it already has `AGENTS.md`, do not overwrite it; include the template path in the
-Codex prompt and tell Codex to reconcile the existing project instructions with
-the app-creator requirements.
+project lacks `package.json` and the request is for a static frontend app,
+bootstrap it with the same Bun commands from the new-project flow. If the
+project already has `package.json`, do not reinitialize it; tell Codex to use Bun
+for package work unless existing project instructions make that impossible.
 
 If an existing project is outside `/opt/data/workspace`, keep the user's source
 path intact. Put clones, scratch copies, exports, screenshots, and new generated
@@ -69,18 +73,25 @@ For long tasks, start Codex in the background with a PTY and poll logs. Avoid
 Use this prompt shape:
 
 ```text
-Read ./AGENTS.md first, then implement the user's coding request in this
-directory.
+Implement the user's coding request in this directory.
 
-Use the project AGENTS.md rules for package manager, Vite bootstrapping,
-shadcn/ui setup, browser-only persistence, static build validation, and simple
-anonymous here.now deployment. If the user's request cannot be satisfied as a
-static frontend app, report the blocker and offer the closest browser-only
-alternative. Keep all generated project data inside this directory.
+This is a Bun-managed, frontend-only static app project. Use Bun commands only:
+`bun`, `bun run`, `bun install`, `bun add`, `bun remove`, and `bunx --bun`. Do
+not use npm, npx, pnpm, or Yarn. Use the existing Bun React/shadcn project
+baseline; for shadcn/ui work, use `bunx --bun shadcn@latest ...` and add only
+the components the app actually uses.
 
-After implementation, run the required validation and deploy the static build to
-here.now anonymously. Report changed files, validation results, the final
-siteUrl, and the anonymous expiry/claim URL if the publish output provides one.
+Keep the app browser-only: no servers, API routes, SSR, server actions, cron
+jobs, external databases, workers, or secret-bearing backend SDKs. Persist app
+state only in browser storage, URL state, or importable/exportable files. If the
+user's request cannot be satisfied as a static frontend app, report the blocker
+and offer the closest browser-only alternative. Keep all generated project data
+inside this directory.
+
+After implementation, run `bun run build`, then run relevant `bun run lint` or
+`bun run test` scripts when they exist. Deploy the static build to here.now
+anonymously. Report changed files, validation results, the final siteUrl, and
+the anonymous expiry/claim URL if the publish output provides one.
 ```
 
 ## Simple Anonymous Static Deploy
@@ -89,7 +100,7 @@ Static publishing is part of this skill. Do not load a separate publishing skill
 or use here.now account, Drive, custom domain, auth, payment, password, or update
 flows for normal app-creator work.
 
-Use only the bundled publish helper after `npm run build` succeeds:
+Use only the bundled publish helper after `bun run build` succeeds:
 
 ```bash
 PROFILE_NAME="${PHOENIX_HERMES_PROFILE_NAME:-phoenix}"

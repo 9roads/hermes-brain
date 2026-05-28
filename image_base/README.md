@@ -21,18 +21,20 @@ docker run --rm -it \
 
 The image installs OpenViking `0.3.19`, `httpx` `0.28.1`, `slack_sdk`
 `3.42.0`, `tiktoken` `0.13.0`, `loisa-composio-cli` `0.1.3`,
-`nori-slack-cli` `0.1.1`, Codex CLI `0.134.0`, and the `hermes-lcm` plugin from
+`nori-slack-cli` `0.1.1`, Codex CLI `0.134.0`, Bun `1.3.14`, and the
+`hermes-lcm` plugin from
 `https://github.com/stephenschoettler/hermes-lcm.git`. The plugin is installed
 into `/opt/hermes/plugins/hermes-lcm` so it is available as a bundled Hermes
 plugin; the Phoenix profile enables `hermes-lcm` and selects
 `context.engine: lcm`.
 
-The Node runtime includes `npm` and `npx` for Codex-managed app projects. The
-image also includes the Codex app-creator project instructions at
-`/opt/hermes/image_base/codex-app-creator/AGENTS.md`. Hermes copies that file to
-`/opt/data/workspace/<project>/AGENTS.md` before invoking Codex, so the Vite,
-shadcn/ui, browser-only state, npm, static build, and here.now deployment rules
-live with the project.
+The Node runtime remains available for bundled CLIs, and Bun plus `bunx` are on
+`PATH` for Codex-managed app projects. On gateway startup, the wrapper configures
+Bun's shared cache under `/opt/data/bun/install/cache`, writes Bun config for the
+Hermes runtime homes, and enables the isolated linker with the global virtual
+store. Hermes no longer copies a custom app-creator `AGENTS.md`; new projects
+are initialized with `bun init --react=shadcn --yes` and
+`bunx --bun skills add shadcn/ui --yes` before Codex is invoked.
 
 On gateway startup, the wrapper installs or updates the Phoenix Hermes profile,
 verifies the profile-owned `nori-slack-cli` and `loisa-viking-cli` skills exist,
