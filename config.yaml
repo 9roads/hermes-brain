@@ -15,7 +15,6 @@ terminal:
     - SLACK_TOKEN
 
 agent:
-  service_tier: priority
   max_turns: 90
   gateway_notify_interval: 0
   reasoning_effort: xhigh
