@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex App Creator"
+  short_description: "Delegate coding tasks to Codex"
+  default_prompt: "Use $codex-app-creator to create AGENTS.md and delegate the coding task to Codex."

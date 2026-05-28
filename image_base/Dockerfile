@@ -14,6 +14,7 @@ ARG SLACK_SDK_VERSION=3.42.0
 ARG TIKTOKEN_VERSION=0.13.0
 ARG COMPOSIO_CLI_VERSION=0.1.3
 ARG NORI_SLACK_CLI_VERSION=0.1.1
+ARG CODEX_CLI_VERSION=0.134.0
 ARG HERMES_LCM_PLUGIN_REPO=https://github.com/stephenschoettler/hermes-lcm.git
 ARG HERMES_LCM_PLUGIN_REF=c62de1978f8b1e7c8068f17b58b1737ff97e25b9
 
@@ -21,6 +22,7 @@ USER root
 
 COPY --from=node_runtime /usr/local/bin/node /usr/local/bin/node
 COPY --from=node_runtime /usr/local/lib/node_modules/corepack /usr/local/lib/node_modules/corepack
+COPY --from=node_runtime /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
 
 RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
       "openviking==${OPENVIKING_VERSION}" \
@@ -40,6 +42,26 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
     openviking --version && \
     ov --version && \
     chown -R hermes:hermes /opt/hermes/.venv
+
+COPY python/phoenix_slack_socket_router.py /tmp/phoenix_slack_socket_router.py
+
+RUN /opt/hermes/.venv/bin/python - <<'PY'
+from pathlib import Path
+import py_compile
+import shutil
+import sysconfig
+
+purelib = Path(sysconfig.get_path("purelib"))
+module = purelib / "phoenix_slack_socket_router.py"
+pth = purelib / "phoenix_slack_socket_router.pth"
+
+shutil.copyfile("/tmp/phoenix_slack_socket_router.py", module)
+py_compile.compile(str(module), doraise=True)
+pth.write_text("import phoenix_slack_socket_router\n", encoding="utf-8")
+shutil.chown(module, user="hermes", group="hermes")
+shutil.chown(pth, user="hermes", group="hermes")
+print(f"Installed Phoenix Slack Socket Mode router patch: {module}")
+PY
 
 RUN /opt/hermes/.venv/bin/python - <<'PY'
 from pathlib import Path
@@ -63,8 +85,12 @@ else:
 PY
 
 RUN set -eux; \
+    ln -sfn ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm; \
+    ln -sfn ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx; \
     ln -sfn ../lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack; \
     node --version; \
+    npm --version; \
+    npx --version; \
     corepack --version; \
     corepack enable; \
     corepack prepare "pnpm@${PNPM_VERSION}" --activate; \
@@ -74,6 +100,13 @@ RUN set -eux; \
     node -e 'const major = Number(process.versions.node.split(".")[0]); if (major < 24) { console.error(`Node >=24 is required, found ${process.versions.node}`); process.exit(1); }'; \
     command -v pnpm >/dev/null; \
     pnpm --version; \
+    mkdir -p /opt/hermes/codex-cli; \
+    cd /opt/hermes/codex-cli; \
+    printf '{"private":true,"dependencies":{"@openai/codex":"%s"}}\n' "$CODEX_CLI_VERSION" > package.json; \
+    pnpm install --prod --no-lockfile; \
+    test -x /opt/hermes/codex-cli/node_modules/.bin/codex; \
+    /opt/hermes/codex-cli/node_modules/.bin/codex --version; \
+    chown -R hermes:hermes /opt/hermes/codex-cli; \
     mkdir -p /opt/hermes/composio-cli; \
     cd /opt/hermes/composio-cli; \
     printf '{"private":true,"dependencies":{"loisa-composio-cli":"%s"}}\n' "$COMPOSIO_CLI_VERSION" > package.json; \
@@ -107,12 +140,15 @@ RUN set -eux; \
     rm -rf "$tmp_lcm"; \
     chown -R hermes:hermes "$plugin_dir"
 
+COPY --chmod=0755 docker/codex /usr/local/bin/codex
+COPY --chown=hermes:hermes codex-app-creator/ /opt/hermes/image_base/codex-app-creator/
 COPY --chmod=0755 docker/entrypoint.sh /opt/hermes/image_base/entrypoint.sh
 COPY --chown=hermes:hermes plugins/memory/openviking_memory/ /opt/hermes/plugins/memory/openviking_memory/
 COPY --chown=hermes:hermes openviking/custom-memory/ /opt/hermes/openviking/custom-memory/
 COPY --chown=hermes:hermes openviking/ov.conf openviking/ovcli.conf /opt/hermes/openviking/
 COPY --chmod=0755 docker/run-with-openviking.sh /opt/hermes/image_base/run-with-openviking.sh
 
+ENV PHOENIX_CODEX_APP_CREATOR_AGENTS=/opt/hermes/image_base/codex-app-creator/AGENTS.md
 ENV OPENVIKING_ENDPOINT=http://127.0.0.1:1933
 ENV OPENVIKING_ACCOUNT=default
 ENV OPENVIKING_USER_SPACE=default

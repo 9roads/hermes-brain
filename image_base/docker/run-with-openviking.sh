@@ -56,6 +56,10 @@ load_env_file() {
 load_env_file "$data_root/.env"
 load_env_file "$profile_dir/.env"
 
+codex_home="${CODEX_HOME:-${PHOENIX_CODEX_HOME:-$data_root/codex}}"
+export PHOENIX_CODEX_HOME="$codex_home"
+export CODEX_HOME="$codex_home"
+
 if [ -z "${SLACK_TOKEN:-}" ] && [ -n "${SLACK_BOT_TOKEN:-}" ]; then
   export SLACK_TOKEN="$SLACK_BOT_TOKEN"
 fi
@@ -64,10 +68,12 @@ if [ -z "${SLACK_BOT_TOKEN:-}" ] && [ -n "${SLACK_TOKEN:-}" ]; then
   export SLACK_BOT_TOKEN="$SLACK_TOKEN"
 fi
 
+export SLACK_API_BASE="${SLACK_API_BASE:-https://slack.com/api/}"
+
 profile_distribution_repo="${HERMES_PROFILE_DISTRIBUTION_REPO:-$profile_distribution_repo}"
 export HERMES_PROFILE_DISTRIBUTION_REPO="$profile_distribution_repo"
 
-mkdir -p "$root_home_dir" "$profile_home_dir" "$root_bin_dir" "$profile_bin_dir"
+mkdir -p "$root_home_dir" "$profile_home_dir" "$root_bin_dir" "$profile_bin_dir" "$codex_home"
 
 ensure_python() {
   if command -v python >/dev/null 2>&1; then
@@ -106,6 +112,52 @@ ensure_nori_slack_cli() {
 
   echo "[phoenix] nori-slack CLI is not available on PATH" >&2
   exit 1
+}
+
+ensure_codex_cli() {
+  if command -v codex >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo "[codex] codex CLI is not available on PATH" >&2
+  exit 1
+}
+
+toml_string() {
+  local value="$1"
+
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  printf '"%s"' "$value"
+}
+
+configure_codex_cli() {
+  local config_file="$codex_home/config.toml"
+  local previous_umask
+  local tmp_file="$config_file.tmp.$$"
+
+  previous_umask="$(umask)"
+  umask 077
+  mkdir -p "$codex_home"
+
+  {
+    printf 'forced_login_method = "api"\n'
+    printf 'cli_auth_credentials_store = "file"\n'
+    printf 'check_for_update_on_startup = false\n'
+    if [ -n "${OPENAI_BASE_URL:-}" ]; then
+      printf 'openai_base_url = %s\n' "$(toml_string "$OPENAI_BASE_URL")"
+    fi
+  } > "$tmp_file"
+  mv "$tmp_file" "$config_file"
+  chmod 600 "$config_file" 2>/dev/null || true
+
+  if [ -n "${OPENAI_API_KEY:-}" ]; then
+    printf '%s\n' "$OPENAI_API_KEY" | codex login --with-api-key >/dev/null
+  else
+    echo "[codex] OPENAI_API_KEY is not set; Codex CLI auth was not initialized"
+  fi
+
+  umask "$previous_umask"
 }
 
 run_root_hermes() {
@@ -159,13 +211,34 @@ ensure_loisa_viking_skill() {
   exit 1
 }
 
+ensure_default_kanban_board_name() {
+  run_profile_hermes python - <<'PY'
+from hermes_cli import kanban_db as kb
+
+desired_name = "General Tasks"
+meta = kb.read_board_metadata(kb.DEFAULT_BOARD)
+current_name = str(meta.get("name") or "").strip()
+
+if current_name == desired_name:
+    pass
+elif current_name in {"", "Default", "default"}:
+    kb.write_board_metadata(kb.DEFAULT_BOARD, name=desired_name)
+    print(f"[phoenix] Named default Kanban board '{desired_name}'")
+else:
+    print(f"[phoenix] Keeping existing default Kanban board name '{current_name}'")
+PY
+}
+
 ensure_python
 ensure_openviking_cli
 ensure_composio_cli
 ensure_nori_slack_cli
+ensure_codex_cli
+configure_codex_cli
 ensure_phoenix_profile
 ensure_nori_slack_skill
 ensure_loisa_viking_skill
+ensure_default_kanban_board_name
 
 export HERMES_HOME="$profile_dir"
 export HOME="$profile_home_dir"

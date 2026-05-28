@@ -14,6 +14,14 @@ Required Phoenix runtime env for connected tools:
 - `COMPOSIO_API_KEY`
 - `SLACK_BOT_TOKEN`
 
+When Hermes connects through the Phoenix Slack Socket Mode router,
+`SLACK_APP_TOKEN` is the Phoenix fake xapp token and `SLACK_SOCKET_API_BASE`
+points at the router API, for example `https://socket-router.example.com/api/`.
+Those router values are process-level runtime config for Socket Mode startup,
+not terminal passthrough values. Terminal tools should only receive
+`SLACK_BOT_TOKEN` or legacy `SLACK_TOKEN`, and normal Slack Web API calls go
+directly to Slack with that real bot token.
+
 The Phoenix Hermes image installs pinned `loisa-composio-cli` and `nori-slack-cli` at build time, exposing `composio` and `nori-slack` on `PATH`. The image wrapper maps legacy `SLACK_TOKEN` to `SLACK_BOT_TOKEN` when needed and verifies the profile-owned `nori-slack-cli` skill is installed.
 
 Reference docs:

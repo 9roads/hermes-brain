@@ -21,16 +21,30 @@ docker run --rm -it \
 
 The image installs OpenViking `0.3.19`, `httpx` `0.28.1`, `slack_sdk`
 `3.42.0`, `tiktoken` `0.13.0`, `loisa-composio-cli` `0.1.3`,
-`nori-slack-cli` `0.1.1`, and the `hermes-lcm` plugin from
+`nori-slack-cli` `0.1.1`, Codex CLI `0.134.0`, and the `hermes-lcm` plugin from
 `https://github.com/stephenschoettler/hermes-lcm.git`. The plugin is installed
 into `/opt/hermes/plugins/hermes-lcm` so it is available as a bundled Hermes
 plugin; the Phoenix profile enables `hermes-lcm` and selects
 `context.engine: lcm`.
 
+The Node runtime includes `npm` and `npx` for Codex-managed app projects. The
+image also includes the Codex app-creator project instructions at
+`/opt/hermes/image_base/codex-app-creator/AGENTS.md`. Hermes copies that file to
+`/opt/data/workspace/<project>/AGENTS.md` before invoking Codex, so the Vite,
+shadcn/ui, browser-only state, npm, static build, and here.now deployment rules
+live with the project.
+
 On gateway startup, the wrapper installs or updates the Phoenix Hermes profile,
 verifies the profile-owned `nori-slack-cli` and `loisa-viking-cli` skills exist,
-starts OpenViking from `/opt/data/openviking`, and then runs the requested Hermes
-command.
+initializes Codex CLI API-key auth from `OPENAI_API_KEY`, names the default
+Kanban board `General Tasks` when it still has Hermes' default display name,
+starts OpenViking from `/opt/data/openviking`, and then runs the requested
+Hermes command.
+
+Codex CLI auth is runtime state, not a baked image secret. The wrapper stores
+Codex config and API-key login cache under `/opt/data/codex` by default. When
+`OPENAI_BASE_URL` is set, it is written to Codex's user-level
+`openai_base_url` config.
 
 On first boot, `/opt/data/openviking/ov.conf` and `ovcli.conf` are copied from
 the image only if missing. Runtime state, indexes, queues, resources, and
@@ -47,3 +61,9 @@ not expose model tools; interactive memory/resource work uses the profile-owned
 The wrapper preserves the official Hermes entrypoint. Phoenix setup and
 OpenViking startup happen after the official entrypoint has bootstrapped
 `/opt/data` and dropped to the `hermes` user.
+
+The image also installs a Python startup patch for Slack Socket Mode. When
+`SLACK_SOCKET_API_BASE` is set, Socket Mode `apps.connections.open` uses that
+base URL and `SLACK_APP_TOKEN`; normal Slack Web API calls continue using the
+existing bot-token Slack client. These router values are consumed by the Hermes
+gateway process and should not be exposed through terminal env passthrough.

@@ -4,10 +4,13 @@ import importlib.util
 import json
 import os
 import re
+import sqlite3
 import sys
+import tempfile
 import types
 import unittest
 import uuid
+from contextlib import closing, contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +28,13 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         for name in (
             "COMPOSIO_TOOL_ROUTER_SESSION_ID",
             "COMPOSIO_MISSING_TOOL_URL_TEMPLATE",
+            "HERMES_HOME",
+            "HERMES_KANBAN_DB",
+            "HERMES_KANBAN_TASK",
+            "HERMES_PROFILE",
+            "HERMES_PROFILE_NAME",
+            "HERMES_SESSION_ID",
+            "PHOENIX_HERMES_PROFILE_NAME",
         ):
             os.environ.pop(name, None)
 
@@ -109,12 +119,15 @@ class PhoenixComposioSessionTests(unittest.TestCase):
             )
 
         plugin.client.create_tool_router_session = fake_create_tool_router_session
-        ctx = FakePluginContext()
-        plugin.register(ctx)
+        with temporary_mapping(plugin) as mapping_path:
+            ctx = FakePluginContext()
+            plugin.register(ctx)
 
-        ctx.hooks["pre_gateway_dispatch"](session_id="session-1", event=slack_event())
-        injected = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
-        repeated = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
+            ctx.hooks["pre_gateway_dispatch"](session_id="session-1", event=slack_event())
+            injected = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
+            repeated = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
+            mapping = read_mapping_file(mapping_path)
+            mapping_mode = mapping_path.stat().st_mode & 0o777
 
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0].slack_user_id, "U123")
@@ -129,6 +142,145 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("nori-slack-cli skill", injected["context"])
         self.assertIn("SLACK_BOT_TOKEN", injected["context"])
         self.assertNotIn("Composio Slackbot tools are allowed", injected["context"])
+        self.assertEqual(
+            mapping["sessions"]["session-1"]["composio_session_id"],
+            "trs_session",
+        )
+        self.assertEqual(mapping_mode, 0o600)
+
+    def test_existing_mapping_avoids_backend_bootstrap(self) -> None:
+        plugin = load_plugin_package()
+
+        def unexpected_create_tool_router_session(request: Any) -> Any:
+            raise AssertionError(f"unexpected backend bootstrap for {request.session_id}")
+
+        plugin.client.create_tool_router_session = unexpected_create_tool_router_session
+
+        with temporary_mapping(plugin):
+            plugin.session_mapping.store_session_response(
+                "session-1",
+                plugin.client.BootstrapSessionResponse(
+                    composio_session_id="trs_cached",
+                    missing_tool_url_template="https://app.test/tools?toolkit={toolkit_slug}",
+                ),
+            )
+            ctx = FakePluginContext()
+            plugin.register(ctx)
+
+            injected = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
+
+        self.assertEqual(os.environ["COMPOSIO_TOOL_ROUTER_SESSION_ID"], "trs_cached")
+        self.assertIn("COMPOSIO_TOOL_ROUTER_SESSION_ID: trs_cached", injected["context"])
+
+    def test_worker_reuses_parent_mapping_and_writes_alias(self) -> None:
+        plugin = load_plugin_package()
+
+        def unexpected_create_tool_router_session(request: Any) -> Any:
+            raise AssertionError(f"unexpected backend bootstrap for {request.session_id}")
+
+        plugin.client.create_tool_router_session = unexpected_create_tool_router_session
+
+        with temporary_mapping(plugin) as mapping_path:
+            with tempfile.TemporaryDirectory() as raw_tmp:
+                kanban_db = Path(raw_tmp) / "kanban.db"
+                write_kanban_task(kanban_db, session_id="origin-session")
+                plugin.session_mapping.store_session_response(
+                    "origin-session",
+                    plugin.client.BootstrapSessionResponse(
+                        composio_session_id="trs_parent",
+                        missing_tool_url_template="https://app.test/tools?toolkit={toolkit_slug}",
+                    ),
+                )
+                ctx = FakePluginContext()
+                plugin.register(ctx)
+
+                with patched_environ(
+                    HERMES_SESSION_ID="worker-session",
+                    HERMES_KANBAN_DB=str(kanban_db),
+                    HERMES_KANBAN_TASK="t_worker",
+                ):
+                    injected = ctx.hooks["pre_llm_call"](is_first_turn=True)
+
+            mapping = read_mapping_file(mapping_path)
+
+        self.assertEqual(os.environ["COMPOSIO_TOOL_ROUTER_SESSION_ID"], "trs_parent")
+        self.assertIn("COMPOSIO_TOOL_ROUTER_SESSION_ID: trs_parent", injected["context"])
+        self.assertEqual(
+            mapping["sessions"]["worker-session"]["composio_session_id"],
+            "trs_parent",
+        )
+
+    def test_missing_or_invalid_mapping_keeps_shared_only_session(self) -> None:
+        plugin = load_plugin_package()
+        calls: list[Any] = []
+
+        def fake_create_tool_router_session(request: Any) -> Any:
+            calls.append(request)
+            return plugin.client.BootstrapSessionResponse(
+                composio_session_id="trs_shared",
+                missing_tool_url_template="https://app.test/tools?toolkit={toolkit_slug}",
+            )
+
+        plugin.client.create_tool_router_session = fake_create_tool_router_session
+
+        with temporary_mapping(plugin) as mapping_path:
+            mapping_path.parent.mkdir(parents=True, exist_ok=True)
+            mapping_path.write_text("{not valid json", encoding="utf-8")
+
+            with tempfile.TemporaryDirectory() as raw_tmp:
+                kanban_db = Path(raw_tmp) / "kanban.db"
+                write_kanban_task(kanban_db, session_id="missing-origin-session")
+                ctx = FakePluginContext()
+                plugin.register(ctx)
+
+                with patched_environ(
+                    HERMES_SESSION_ID="worker-session",
+                    HERMES_KANBAN_DB=str(kanban_db),
+                    HERMES_KANBAN_TASK="t_worker",
+                ):
+                    ctx.hooks["pre_llm_call"](is_first_turn=True)
+
+            mapping = read_mapping_file(mapping_path)
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0].session_id, "worker-session")
+        self.assertIsNone(calls[0].slack_user_id)
+        self.assertIsNone(calls[0].slack_channel_id)
+        self.assertEqual(
+            mapping["sessions"]["worker-session"]["composio_session_id"],
+            "trs_shared",
+        )
+
+    def test_worker_without_mapping_falls_back_to_shared_session(self) -> None:
+        plugin = load_plugin_package()
+        calls: list[Any] = []
+
+        def fake_create_tool_router_session(request: Any) -> Any:
+            calls.append(request)
+            return plugin.client.BootstrapSessionResponse(
+                composio_session_id="trs_shared",
+                missing_tool_url_template="https://app.test/tools?toolkit={toolkit_slug}",
+            )
+
+        plugin.client.create_tool_router_session = fake_create_tool_router_session
+
+        with temporary_mapping(plugin):
+            with tempfile.TemporaryDirectory() as raw_tmp:
+                kanban_db = Path(raw_tmp) / "kanban.db"
+                write_kanban_task(kanban_db, session_id=None)
+                ctx = FakePluginContext()
+                plugin.register(ctx)
+
+                with patched_environ(
+                    HERMES_SESSION_ID="worker-session",
+                    HERMES_KANBAN_DB=str(kanban_db),
+                    HERMES_KANBAN_TASK="t_worker",
+                ):
+                    ctx.hooks["pre_llm_call"](session_id="worker-session", is_first_turn=True)
+
+        self.assertEqual(len(calls), 1)
+        self.assertIsNone(calls[0].slack_user_id)
+        self.assertIsNone(calls[0].slack_channel_id)
 
     def test_missing_tool_url_slug_replacement_is_url_safe(self) -> None:
         plugin = load_plugin_package()
@@ -157,12 +309,14 @@ class PhoenixComposioSessionTests(unittest.TestCase):
             )
 
         plugin.client.create_tool_router_session = flaky_create_tool_router_session
-        ctx = FakePluginContext()
-        plugin.register(ctx)
 
-        failed = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
-        retried = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
-        repeated = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
+        with temporary_mapping(plugin):
+            ctx = FakePluginContext()
+            plugin.register(ctx)
+
+            failed = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
+            retried = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
+            repeated = ctx.hooks["pre_llm_call"](session_id="session-1", is_first_turn=True)
 
         self.assertEqual(calls, 2)
         self.assertIn("could not be created", failed["context"])
@@ -197,6 +351,11 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("- phoenix-composio-session", config)
         self.assertNotIn("COMPOSIO_MCP_URL", config)
         self.assertNotIn("mcp_servers:\n  composio:", config)
+        self.assertIn("- SLACK_BOT_TOKEN", config)
+        self.assertIn("- SLACK_TOKEN", config)
+        self.assertNotIn("- SLACK_APP_TOKEN", config)
+        self.assertNotIn("- SLACK_SOCKET_API_BASE", config)
+        self.assertNotIn("- SLACK_API_BASE", config)
         self.assertNotIn("composio", mcp.get("mcpServers", {}))
         self.assertIn("COMPOSIO_API_KEY", plugin_yaml)
         self.assertIn('shutil.which("composio")', healthcheck)
@@ -276,6 +435,68 @@ def load_plugin_package():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+@contextmanager
+def patched_environ(**updates: str | None):
+    previous = {name: os.environ.get(name) for name in updates}
+
+    for name, value in updates.items():
+        if value is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = value
+
+    try:
+        yield
+    finally:
+        for name, value in previous.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+
+
+@contextmanager
+def temporary_mapping(plugin: Any):
+    with tempfile.TemporaryDirectory() as raw_tmp:
+        previous = plugin.session_mapping.MAPPING_PATH
+        mapping_path = Path(raw_tmp) / "composio" / "mapping.json"
+        plugin.session_mapping.MAPPING_PATH = mapping_path
+
+        try:
+            yield mapping_path
+        finally:
+            plugin.session_mapping.MAPPING_PATH = previous
+
+
+def read_mapping_file(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert isinstance(data, dict)
+    return data
+
+
+def write_kanban_task(
+    path: Path,
+    *,
+    session_id: str | None,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    with closing(sqlite3.connect(path)) as conn:
+        with conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT
+                )
+                """
+            )
+            conn.execute(
+                "INSERT OR REPLACE INTO tasks (id, session_id) VALUES (?, ?)",
+                ("t_worker", session_id),
+            )
 
 
 if __name__ == "__main__":

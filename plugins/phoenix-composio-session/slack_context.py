@@ -154,4 +154,3 @@ def clean_text(value: Any, *, max_length: int = 500) -> str:
         return ""
 
     return text[:max_length]
-

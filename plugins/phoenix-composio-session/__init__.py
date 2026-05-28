@@ -6,11 +6,12 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from . import client, prompt_context, slack_context
+    from . import client, prompt_context, session_mapping, slack_context
 except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
     import client
     import prompt_context
+    import session_mapping
     import slack_context
 
 
@@ -36,10 +37,27 @@ def register(ctx: Any) -> None:
 
     def pre_llm_call(*args: Any, **kwargs: Any) -> dict[str, str] | None:
         hook_kwargs = coerce_hook_kwargs(args, kwargs)
-        session_id = slack_context.read_session_id(hook_kwargs) or "hermes_session_unknown"
+        worker_session_id = (
+            session_mapping.current_hermes_session_id()
+            if session_mapping.is_kanban_worker()
+            else None
+        )
+        session_id = (
+            worker_session_id
+            or slack_context.read_session_id(hook_kwargs)
+            or session_mapping.current_hermes_session_id()
+            or "hermes_session_unknown"
+        )
 
         if session_id in _bootstrapped_sessions:
             return None
+
+        mapped_response = session_mapping.resolve_mapped_session(session_id)
+
+        if mapped_response is not None:
+            _bootstrapped_sessions.add(session_id)
+            prompt_context.apply_session_environment(mapped_response)
+            return {"context": prompt_context.build_prompt_context(mapped_response)}
 
         actor_context = slack_context.get_slack_context(session_id)
 
@@ -51,6 +69,7 @@ def register(ctx: Any) -> None:
                 )
             )
             _bootstrapped_sessions.add(session_id)
+            session_mapping.store_session_response(session_id, response)
             prompt_context.apply_session_environment(response)
             return {"context": prompt_context.build_prompt_context(response)}
         except Exception as exc:
