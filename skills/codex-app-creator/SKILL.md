@@ -97,7 +97,7 @@ not use npm, npx, pnpm, or Yarn.
 Use the installed shadcn skill and the existing Bun React/shadcn project
 baseline as the UI foundation. Read `.agents/skills/shadcn/SKILL.md` when it is
 present. Make extensive use of shadcn/ui components, and base all app UI on
-shadcn components and patterns. Add needed components with
+shadcn components and patterns and blocks. Add needed components with
 `bunx --bun shadcn@latest ...`; add only components the app actually uses. Do
 not hand-roll custom buttons, dialogs, tabs, forms, menus, tables, cards,
 toasts, or other common UI primitives when a shadcn component exists. For
