@@ -56,19 +56,34 @@ Use `codex exec` with GPT-5.5 and high reasoning effort. If that model is
 unavailable, report the blocker instead of silently switching models. Use a PTY
 when invoking through Hermes terminal tooling.
 
+Hermes already runs Codex inside an externally isolated gVisor environment, so
+Codex must not enable its own sandbox. Always use the explicit no-sandbox bypass
+flag shown below. Do not pass `--sandbox`, `--yolo`, `sandbox_workspace_write.*`,
+or any other Codex sandbox option for this skill.
+
+Capture Codex's final response with `--output-last-message` and keep the live
+execution transcript in a log file. Read the log only for progress, diagnosis,
+or a short error tail. Do not relay the full Codex transcript back to Hermes or
+the user.
+
 ```bash
+CODEX_FINAL="$PROJECT_DIR/.codex-final.md"
+CODEX_LOG="$PROJECT_DIR/.codex-run.log"
+
 codex exec \
   --model gpt-5.5 \
   -c model_reasoning_effort=high \
-  -c sandbox_workspace_write.network_access=true \
-  --sandbox workspace-write \
+  --dangerously-bypass-approvals-and-sandbox \
   --skip-git-repo-check \
+  --output-last-message "$CODEX_FINAL" \
   --cd "$PROJECT_DIR" \
-  "$PROMPT"
+  "$PROMPT" >"$CODEX_LOG" 2>&1
 ```
 
-For long tasks, start Codex in the background with a PTY and poll logs. Avoid
-`--yolo`; only use full sandbox bypass inside an external isolated runner.
+For long tasks, start Codex in the background with a PTY and poll
+`$CODEX_LOG`. On success, use only `$CODEX_FINAL` for Codex's result. On
+failure, inspect `$CODEX_LOG` and report only the blocker plus the last useful
+error lines.
 
 Use this prompt shape:
 
@@ -77,9 +92,17 @@ Implement the user's coding request in this directory.
 
 This is a Bun-managed, frontend-only static app project. Use Bun commands only:
 `bun`, `bun run`, `bun install`, `bun add`, `bun remove`, and `bunx --bun`. Do
-not use npm, npx, pnpm, or Yarn. Use the existing Bun React/shadcn project
-baseline; for shadcn/ui work, use `bunx --bun shadcn@latest ...` and add only
-the components the app actually uses.
+not use npm, npx, pnpm, or Yarn.
+
+Use the installed shadcn skill and the existing Bun React/shadcn project
+baseline as the UI foundation. Read `.agents/skills/shadcn/SKILL.md` when it is
+present. Make extensive use of shadcn/ui components, and base all app UI on
+shadcn components and patterns. Add needed components with
+`bunx --bun shadcn@latest ...`; add only components the app actually uses. Do
+not hand-roll custom buttons, dialogs, tabs, forms, menus, tables, cards,
+toasts, or other common UI primitives when a shadcn component exists. For
+charts, install the shadcn chart component with
+`bunx --bun shadcn@latest add chart` and build chart UI from that component.
 
 Keep the app browser-only: no servers, API routes, SSR, server actions, cron
 jobs, external databases, workers, or secret-bearing backend SDKs. Persist app
@@ -88,10 +111,18 @@ user's request cannot be satisfied as a static frontend app, report the blocker
 and offer the closest browser-only alternative. Keep all generated project data
 inside this directory.
 
+You are building one-off static apps for users. Prioritize fast delivery of a
+working, polished app over exhaustive testing or perfection. Use pragmatic
+validation, but do not expand the task into broad test coverage unless the user
+explicitly asks for it or the app logic is risky enough to need it.
+
 After implementation, run `bun run build`, then run relevant `bun run lint` or
 `bun run test` scripts when they exist. Deploy the static build to here.now
-anonymously. Report changed files, validation results, the final siteUrl, and
-the anonymous expiry/claim URL if the publish output provides one.
+anonymously after a successful build; do not ask for permission before
+publishing. Keep the final response compact: no code dumps, no long logs, and no
+implementation transcript. Report only changed files, validation results, the
+final siteUrl, and the anonymous expiry/claim URL if the publish output provides
+one.
 ```
 
 ## Simple Anonymous Static Deploy
@@ -100,7 +131,8 @@ Static publishing is part of this skill. Do not load a separate publishing skill
 or use here.now account, Drive, custom domain, auth, payment, password, or update
 flows for normal app-creator work.
 
-Use only the bundled publish helper after `bun run build` succeeds:
+Use only the bundled publish helper after `bun run build` succeeds. Publishing
+is part of the normal flow, so do not ask for confirmation before running it:
 
 ```bash
 PROFILE_NAME="${PHOENIX_HERMES_PROFILE_NAME:-phoenix}"
