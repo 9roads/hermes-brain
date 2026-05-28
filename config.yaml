@@ -1,6 +1,6 @@
 model:
   provider: custom
-  default: gpt-5.5
+  default: gpt-5.5-fast
   base_url: ${OPENAI_BASE_URL}
   api_key: ${OPENAI_API_KEY}
   api_mode: codex_responses
