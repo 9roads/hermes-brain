@@ -4,7 +4,7 @@ This directory is the Phoenix-owned Hermes profile distribution source. It is in
 
 Edit static agent behavior here: `SOUL.md`, `config.yaml`, `skills/`, `plugins/`, `cron/`, and `scripts/`. Runtime state does not belong here.
 
-Hermes reads MCP servers from `config.yaml` under `mcp_servers`; Phoenix should not add MCP servers to an installed sandbox at runtime. This profile intentionally does not configure a static Composio MCP server. Composio access is bootstrapped per Hermes session by `plugins/phoenix-composio-session` and used through the `composio-cli` skill for non-Slack connected tools. Slack API access uses the `nori-slack-cli` skill and `nori-slack` CLI with `SLACK_BOT_TOKEN`.
+Hermes reads MCP servers from `config.yaml` under `mcp_servers`; Phoenix should not add MCP servers to an installed sandbox at runtime. This profile intentionally does not configure a static Composio MCP server. Composio access is bootstrapped per Hermes session by `plugins/phoenix-composio-session` and used through the `composio-cli` skill for non-Slack connected tools. Slack API access uses the `nori-slack-cli` skill and `nori-slack` CLI with `SLACK_BOT_TOKEN`. Public web work uses the profile-owned Parallel CLI skills and `parallel-cli`, including search, extraction, Task/deep research, FindAll, Monitor, and data enrichment. Browser automation uses the profile-owned `agent-browser` skill and `agent-browser` CLI with Kernel. The built-in Hermes `web` and `browser` toolsets are globally disabled.
 
 Required Phoenix runtime env for connected tools:
 
@@ -12,6 +12,8 @@ Required Phoenix runtime env for connected tools:
 - `PHOENIX_WORKSPACE_ID`
 - `PHOENIX_HERMES_PLUGIN_TOKEN`
 - `COMPOSIO_API_KEY`
+- `KERNEL_API_KEY`
+- `PARALLEL_API_KEY`
 - `SLACK_BOT_TOKEN`
 
 When Hermes connects through the Phoenix Slack Socket Mode router,
@@ -22,11 +24,13 @@ not terminal passthrough values. Terminal tools should only receive
 `SLACK_BOT_TOKEN` or legacy `SLACK_TOKEN`, and normal Slack Web API calls go
 directly to Slack with that real bot token.
 
-The Phoenix Hermes image installs pinned `loisa-composio-cli`, `nori-slack-cli`,
-and Bun at build time, exposing `composio`, `nori-slack`, `bun`, and `bunx` on
-`PATH`. The image wrapper maps legacy `SLACK_TOKEN` to `SLACK_BOT_TOKEN` when
-needed, configures Bun's shared cache/global store for Codex-created app
-projects, and verifies the profile-owned `nori-slack-cli` skill is installed.
+The Phoenix Hermes image installs pinned `parallel-web-tools[cli]`,
+`agent-browser`, `loisa-composio-cli`, `nori-slack-cli`, and Bun at build time,
+exposing `parallel-cli`, `agent-browser`, `composio`, `nori-slack`, `bun`, and
+`bunx` on `PATH`. The image sets `AGENT_BROWSER_PROVIDER=kernel`, maps legacy
+`SLACK_TOKEN` to `SLACK_BOT_TOKEN` when needed, configures Bun's shared
+cache/global store for Codex-created app projects, and verifies required CLIs
+and profile-owned core skills are available.
 
 Phoenix runs Hermes in trusted Daytona sandboxes, so `config.yaml` sets `approvals.mode: off`. Hermes docs define this as skipping terminal approval checks, equivalent to `HERMES_YOLO_MODE=true`; switch it back to `smart` or `manual` for non-sandboxed or user-owned hosts.
 

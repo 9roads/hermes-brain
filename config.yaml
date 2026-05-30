@@ -19,13 +19,17 @@ terminal:
   env_passthrough:
     - SLACK_BOT_TOKEN
     - SLACK_TOKEN
+    - PARALLEL_API_KEY
+    - KERNEL_API_KEY
 
 agent:
   max_turns: 90
   gateway_notify_interval: 0
   reasoning_effort: xhigh
   text_verbosity: low
-  disabled_toolsets: []
+  disabled_toolsets:
+    - web
+    - browser
 
 auxiliary:
   compression:
@@ -204,22 +208,20 @@ skills:
     - writing-plans
     - yuanbao
 
-web:
-  backend: "tavily"
-
 image_gen:
   model: fal-ai/flux-2/klein/9b
 
 tts:
   provider: openai
   openai:
-    model: gpt-4o-mini-tts
+    model: openai/gpt-4o-mini-tts-2025-12-15
     voice: alloy
+    base_url: https://openrouter.ai/api/v1
 
 stt:
+  enabled: true
   provider: openai
   openai:
-    model: whisper-1
-
-browser:
-  cloud_provider: browserbase
+    model: openai/whisper-1
+    api_key: ${OPENROUTER_API_KEY}
+    base_url: https://openrouter.ai/api/v1

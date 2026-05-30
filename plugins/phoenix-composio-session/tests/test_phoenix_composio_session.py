@@ -345,10 +345,18 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         config = (HERMES_ROOT / "config.yaml").read_text(encoding="utf-8")
         plugin_yaml = (PLUGIN_ROOT / "plugin.yaml").read_text(encoding="utf-8")
         healthcheck = (HERMES_ROOT / "scripts" / "healthcheck.py").read_text(encoding="utf-8")
+        dockerfile = (HERMES_ROOT / "image_base" / "Dockerfile").read_text(encoding="utf-8")
         soul = (HERMES_ROOT / "SOUL.md").read_text(encoding="utf-8")
+        readme = (HERMES_ROOT / "README.md").read_text(encoding="utf-8")
+        env_example = (HERMES_ROOT / ".env.EXAMPLE").read_text(encoding="utf-8")
         mcp = json.loads((HERMES_ROOT / "mcp.json").read_text(encoding="utf-8"))
 
         self.assertIn("- phoenix-composio-session", config)
+        self.assertIn("- PARALLEL_API_KEY", config)
+        self.assertRegex(config, r"disabled_toolsets:\n\s+- web")
+        self.assertRegex(config, r"disabled_toolsets:[\s\S]*\n\s+- browser")
+        self.assertNotIn('backend: "tavily"', config)
+        self.assertNotIn("cloud_provider: browserbase", config)
         self.assertNotIn("COMPOSIO_MCP_URL", config)
         self.assertNotIn("mcp_servers:\n  composio:", config)
         self.assertIn("- SLACK_BOT_TOKEN", config)
@@ -360,12 +368,66 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("COMPOSIO_API_KEY", plugin_yaml)
         self.assertIn('shutil.which("composio")', healthcheck)
         self.assertIn('shutil.which("nori-slack")', healthcheck)
+        self.assertIn('shutil.which("parallel-cli")', healthcheck)
+        self.assertIn('shutil.which("agent-browser")', healthcheck)
         self.assertIn("COMPOSIO_API_KEY", healthcheck)
+        self.assertIn("KERNEL_API_KEY", healthcheck)
+        self.assertIn("PARALLEL_API_KEY", healthcheck)
+        self.assertIn("AGENT_BROWSER_PROVIDER", healthcheck)
         self.assertIn("PHOENIX_BACKEND_URL", healthcheck)
         self.assertIn("PHOENIX_HERMES_PLUGIN_TOKEN", healthcheck)
+        self.assertNotIn("BROWSERBASE_API_KEY", healthcheck)
+        self.assertNotIn("BROWSERBASE_PROJECT_ID", healthcheck)
+        self.assertNotIn("TAVILY_API_KEY", healthcheck)
+        self.assertIn("parallel-web-tools[cli]==${PARALLEL_WEB_TOOLS_VERSION}", dockerfile)
+        self.assertIn("parallel-cli --version", dockerfile)
+        self.assertIn("agent-browser", dockerfile)
+        self.assertIn("AGENT_BROWSER_PROVIDER=kernel", dockerfile)
+        self.assertIn("PARALLEL_API_KEY", readme)
+        self.assertIn("KERNEL_API_KEY", readme)
+        self.assertIn("parallel-cli", readme)
+        self.assertIn("agent-browser", readme)
+        self.assertIn("PARALLEL_API_KEY=", env_example)
+        self.assertIn("KERNEL_API_KEY=", env_example)
+        self.assertNotIn("BROWSERBASE_API_KEY=", env_example)
+        self.assertNotIn("BROWSERBASE_PROJECT_ID=", env_example)
         self.assertIn("nori-slack-cli", soul)
         self.assertIn("SLACK_BOT_TOKEN", soul)
+        self.assertIn("## External tools", soul)
+        self.assertIn("Parallel CLI skills", soul)
         self.assertNotIn("Composio Slackbot tools are allowed", soul)
+
+    def test_parallel_profile_skills_are_limited_and_skip_onboarding(self) -> None:
+        skills_dir = HERMES_ROOT / "skills"
+        expected = {
+            "parallel-web-search",
+            "parallel-web-extract",
+            "parallel-deep-research",
+            "parallel-findall",
+            "parallel-monitor",
+            "parallel-data-enrichment",
+        }
+        actual = {path.name for path in skills_dir.glob("parallel-*") if path.is_dir()}
+
+        self.assertEqual(expected, actual)
+
+        forbidden = (
+            "parallel-cli-setup",
+            "## Setup",
+            "## Prerequisites",
+            "Prerequisites",
+            "pipx",
+            "install and authenticate",
+            "balance add",
+            "If `parallel-cli` is not found",
+        )
+
+        for skill in expected:
+            content = (skills_dir / skill / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("parallel-cli", content)
+            self.assertIn("PARALLEL_API_KEY", content)
+            for phrase in forbidden:
+                self.assertNotIn(phrase, content, f"{skill} contains onboarding text: {phrase}")
 
 
 class FakePluginContext:

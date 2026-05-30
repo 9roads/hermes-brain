@@ -139,6 +139,29 @@ ensure_nori_slack_cli() {
   exit 1
 }
 
+ensure_parallel_cli() {
+  if ! command -v parallel-cli >/dev/null 2>&1; then
+    echo "[phoenix] parallel-cli is not available on PATH" >&2
+    exit 1
+  fi
+
+  parallel-cli --version >/dev/null
+}
+
+ensure_agent_browser_cli() {
+  if ! command -v agent-browser >/dev/null 2>&1; then
+    echo "[phoenix] agent-browser CLI is not available on PATH" >&2
+    exit 1
+  fi
+
+  if [ "${AGENT_BROWSER_PROVIDER:-}" != "kernel" ]; then
+    echo "[phoenix] AGENT_BROWSER_PROVIDER must be kernel" >&2
+    exit 1
+  fi
+
+  agent-browser --version >/dev/null
+}
+
 ensure_bun_cli() {
   if ! command -v bun >/dev/null 2>&1; then
     echo "[phoenix] bun CLI is not available on PATH" >&2
@@ -303,6 +326,8 @@ ensure_python
 ensure_openviking_cli
 ensure_composio_cli
 ensure_nori_slack_cli
+ensure_parallel_cli
+ensure_agent_browser_cli
 ensure_bun_cli
 configure_bun
 ensure_codex_cli

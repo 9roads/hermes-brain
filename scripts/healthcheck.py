@@ -85,12 +85,11 @@ if not openviking_ok:
 
 # 4. Phoenix connected-tool runtime
 for name in (
-    "BROWSERBASE_API_KEY",
-    "BROWSERBASE_PROJECT_ID",
     "COMPOSIO_API_KEY",
+    "KERNEL_API_KEY",
+    "PARALLEL_API_KEY",
     "PHOENIX_BACKEND_URL",
     "PHOENIX_HERMES_PLUGIN_TOKEN",
-    "TAVILY_API_KEY",
 ):
     if not os.environ.get(name, "").strip():
         print(f"{name} missing from Hermes runtime env", file=sys.stderr)
@@ -102,6 +101,18 @@ if not shutil.which("composio"):
 
 if not shutil.which("nori-slack"):
     print("nori-slack CLI is not available on PATH", file=sys.stderr)
+    sys.exit(1)
+
+if not shutil.which("parallel-cli"):
+    print("parallel-cli is not available on PATH", file=sys.stderr)
+    sys.exit(1)
+
+if not shutil.which("agent-browser"):
+    print("agent-browser CLI is not available on PATH", file=sys.stderr)
+    sys.exit(1)
+
+if os.environ.get("AGENT_BROWSER_PROVIDER") != "kernel":
+    print("AGENT_BROWSER_PROVIDER must be kernel", file=sys.stderr)
     sys.exit(1)
 
 print("ok")

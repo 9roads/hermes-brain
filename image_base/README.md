@@ -22,13 +22,14 @@ docker run --rm -it \
   -v phoenix-hermes-data:/opt/data \
   -e OPENAI_BASE_URL="$OPENAI_BASE_URL" \
   -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+  -e KERNEL_API_KEY="$KERNEL_API_KEY" \
   phoenix-hermes-openviking:local gateway run -v
 ```
 
 The image installs OpenViking `0.3.19`, `httpx` `0.28.1`, `slack_sdk`
-`3.42.0`, `tiktoken` `0.13.0`, `loisa-composio-cli` `0.1.3`,
-`nori-slack-cli` `0.1.1`, Codex CLI `0.134.0`, Bun `1.3.14`, and the
-`hermes-lcm` plugin from
+`3.42.0`, `tiktoken` `0.13.0`, `parallel-web-tools[cli]` `0.5.0`,
+`agent-browser` `0.27.0`, `loisa-composio-cli` `0.1.3`, `nori-slack-cli`
+`0.1.1`, Codex CLI `0.134.0`, Bun `1.3.14`, and the `hermes-lcm` plugin from
 `https://github.com/stephenschoettler/hermes-lcm.git`. The plugin is installed
 into `/opt/hermes/plugins/hermes-lcm` so it is available as a bundled Hermes
 plugin; the Phoenix profile enables `hermes-lcm` and selects
@@ -43,11 +44,13 @@ are initialized with `bun init --react=shadcn --yes` and
 `bunx --bun skills add shadcn/ui --yes` before Codex is invoked.
 
 On gateway startup, the wrapper installs or updates the Phoenix Hermes profile,
-verifies the profile-owned `nori-slack-cli` and `loisa-viking-cli` skills exist,
+verifies required CLIs including `parallel-cli` and `agent-browser`, verifies
+the profile-owned `nori-slack-cli` and `loisa-viking-cli` skills exist,
 initializes Codex CLI API-key auth from `OPENAI_API_KEY`, names the default
 Kanban board `General Tasks` when it still has Hermes' default display name,
 starts OpenViking from `/opt/data/openviking`, and then runs the requested
-Hermes command.
+Hermes command. The image sets `AGENT_BROWSER_PROVIDER=kernel`; Phoenix passes
+only `KERNEL_API_KEY` for remote browser automation at runtime.
 
 Codex CLI auth is runtime state, not a baked image secret. The wrapper stores
 Codex config and API-key login cache under `/opt/data/codex` by default. When

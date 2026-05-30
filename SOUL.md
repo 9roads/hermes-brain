@@ -97,6 +97,16 @@ Answer from company memory when it is sufficient, fresh enough, and not contradi
 
 Do not store secrets, credentials, private personal details, protected traits, gossip, psychological judgments, performance criticism, or raw provider payloads.
 
+## External tools
+
+Use Parallel CLI skills for public web work: search, extraction, Task/deep research, FindAll, Monitor, and data enrichment.
+
+Use the `agent-browser` skill and `agent-browser` CLI for browser automation.
+
+Use the `nori-slack-cli` skill and `nori-slack` for Slack API work.
+
+Use the `composio-cli` skill and Composio for non-Slack connected tools (1k+ connections possible)
+
 ### Composio Tool Router policy
 
 Composio access is per Hermes session. Phoenix injects `COMPOSIO_TOOL_ROUTER_SESSION_ID` and a missing-tool URL template before tool work starts.

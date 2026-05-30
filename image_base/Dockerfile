@@ -15,9 +15,11 @@ ARG OPENVIKING_VERSION=0.3.19
 ARG HTTPX_VERSION=0.28.1
 ARG SLACK_SDK_VERSION=3.42.0
 ARG TIKTOKEN_VERSION=0.13.0
+ARG PARALLEL_WEB_TOOLS_VERSION=0.5.0
 ARG COMPOSIO_CLI_VERSION=0.1.3
 ARG NORI_SLACK_CLI_VERSION=0.1.1
 ARG CODEX_CLI_VERSION=0.134.0
+ARG AGENT_BROWSER_VERSION=0.27.0
 ARG HERMES_LCM_PLUGIN_REPO=https://github.com/stephenschoettler/hermes-lcm.git
 ARG HERMES_LCM_PLUGIN_REF=c62de1978f8b1e7c8068f17b58b1737ff97e25b9
 
@@ -32,11 +34,13 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
       "openviking==${OPENVIKING_VERSION}" \
       "httpx==${HTTPX_VERSION}" \
       "slack_sdk==${SLACK_SDK_VERSION}" \
-      "tiktoken==${TIKTOKEN_VERSION}" && \
+      "tiktoken==${TIKTOKEN_VERSION}" \
+      "parallel-web-tools[cli]==${PARALLEL_WEB_TOOLS_VERSION}" && \
     test -x /opt/hermes/.venv/bin/python && \
     test -x /opt/hermes/.venv/bin/hermes && \
     test -x /opt/hermes/.venv/bin/openviking && \
     test -x /opt/hermes/.venv/bin/ov && \
+    test -x /opt/hermes/.venv/bin/parallel-cli && \
     printf '%s\n' '#!/bin/sh' 'exec /opt/hermes/.venv/bin/python "$@"' > /usr/local/bin/python && \
     chmod 0755 /usr/local/bin/python && \
     printf '%s\n' '#!/bin/sh' 'exec /opt/hermes/.venv/bin/hermes "$@"' > /usr/local/bin/hermes && \
@@ -45,6 +49,7 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
     chmod 0755 /opt/hermes/hermes && \
     ln -sfn /opt/hermes/.venv/bin/openviking /usr/local/bin/openviking && \
     ln -sfn /opt/hermes/.venv/bin/ov /usr/local/bin/ov && \
+    ln -sfn /opt/hermes/.venv/bin/parallel-cli /usr/local/bin/parallel-cli && \
     export PATH="/opt/hermes/.venv/bin:$PATH" && \
     hash -r && \
     python -c 'import tiktoken' && \
@@ -56,6 +61,7 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
     PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" hermes --help >/dev/null && \
     openviking --version && \
     ov --version && \
+    parallel-cli --version && \
     chown -R hermes:hermes /opt/hermes/.venv
 
 COPY python/phoenix_slack_socket_router.py /tmp/phoenix_slack_socket_router.py
@@ -126,6 +132,17 @@ RUN set -eux; \
     test -x /opt/hermes/codex-cli/node_modules/.bin/codex; \
     /opt/hermes/codex-cli/node_modules/.bin/codex --version; \
     chown -R hermes:hermes /opt/hermes/codex-cli; \
+    mkdir -p /opt/hermes/agent-browser; \
+    cd /opt/hermes/agent-browser; \
+    printf '{"private":true,"dependencies":{"agent-browser":"%s"}}\n' "$AGENT_BROWSER_VERSION" > package.json; \
+    printf '%s\n' 'allowBuilds:' '  agent-browser: true' > pnpm-workspace.yaml; \
+    pnpm install --prod --no-lockfile; \
+    test -x /opt/hermes/agent-browser/node_modules/.bin/agent-browser; \
+    printf '%s\n' '#!/bin/sh' 'exec /opt/hermes/agent-browser/node_modules/.bin/agent-browser "$@"' > /usr/local/bin/agent-browser; \
+    chmod 0755 /usr/local/bin/agent-browser; \
+    agent-browser --version; \
+    agent-browser skills list >/dev/null; \
+    chown -R hermes:hermes /opt/hermes/agent-browser; \
     mkdir -p /opt/hermes/composio-cli; \
     cd /opt/hermes/composio-cli; \
     printf '{"private":true,"dependencies":{"loisa-composio-cli":"%s"}}\n' "$COMPOSIO_CLI_VERSION" > package.json; \
@@ -177,5 +194,6 @@ ENV OPENVIKING_ENDPOINT=http://127.0.0.1:1933
 ENV OPENVIKING_ACCOUNT=default
 ENV OPENVIKING_USER_SPACE=default
 ENV OPENVIKING_AGENT_ID=hermes-memory
+ENV AGENT_BROWSER_PROVIDER=kernel
 
 ENTRYPOINT ["/init", "/opt/hermes/image_base/main-wrapper.sh"]
