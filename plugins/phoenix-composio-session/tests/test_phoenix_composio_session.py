@@ -346,13 +346,16 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         plugin_yaml = (PLUGIN_ROOT / "plugin.yaml").read_text(encoding="utf-8")
         healthcheck = (HERMES_ROOT / "scripts" / "healthcheck.py").read_text(encoding="utf-8")
         dockerfile = (HERMES_ROOT / "image_base" / "Dockerfile").read_text(encoding="utf-8")
+        runner = (
+            HERMES_ROOT / "image_base" / "docker" / "run-with-openviking.sh"
+        ).read_text(encoding="utf-8")
         soul = (HERMES_ROOT / "SOUL.md").read_text(encoding="utf-8")
         readme = (HERMES_ROOT / "README.md").read_text(encoding="utf-8")
         env_example = (HERMES_ROOT / ".env.EXAMPLE").read_text(encoding="utf-8")
         mcp = json.loads((HERMES_ROOT / "mcp.json").read_text(encoding="utf-8"))
 
         self.assertIn("- phoenix-composio-session", config)
-        self.assertIn("- PARALLEL_API_KEY", config)
+        self.assertNotIn("- PARALLEL_API_KEY", config)
         self.assertRegex(config, r"disabled_toolsets:\n\s+- web")
         self.assertRegex(config, r"disabled_toolsets:[\s\S]*\n\s+- browser")
         self.assertNotIn("cloud_provider: browserbase", config)
@@ -379,6 +382,9 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertNotIn("BROWSERBASE_PROJECT_ID", healthcheck)
         self.assertIn("parallel-web-tools[cli]==${PARALLEL_WEB_TOOLS_VERSION}", dockerfile)
         self.assertIn("parallel-cli --version", dockerfile)
+        self.assertIn("configure_parallel_cli", runner)
+        self.assertIn(".config/parallel-web-tools", runner)
+        self.assertIn("env -u PARALLEL_API_KEY", runner)
         self.assertIn("agent-browser", dockerfile)
         self.assertIn("AGENT_BROWSER_PROVIDER=kernel", dockerfile)
         self.assertIn("PARALLEL_API_KEY", readme)
@@ -423,7 +429,8 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         for skill in expected:
             content = (skills_dir / skill / "SKILL.md").read_text(encoding="utf-8")
             self.assertIn("parallel-cli", content)
-            self.assertIn("PARALLEL_API_KEY", content)
+            self.assertIn("authenticated", content)
+            self.assertNotIn("PARALLEL_API_KEY", content)
             for phrase in forbidden:
                 self.assertNotIn(phrase, content, f"{skill} contains onboarding text: {phrase}")
 

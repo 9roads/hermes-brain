@@ -12,9 +12,9 @@ metadata:
 # Parallel Web Search
 
 Use this skill for public web search and current-information lookup. Phoenix
-provides `parallel-cli` and `PARALLEL_API_KEY` at runtime. Do not print, paste,
-persist, echo, or include the API key in command output, logs, reports, or final
-responses.
+provides authenticated `parallel-cli` at runtime. Do not inspect, print, paste,
+persist, echo, or include Parallel credentials in command output, logs, reports,
+or final responses.
 
 ## Command
 

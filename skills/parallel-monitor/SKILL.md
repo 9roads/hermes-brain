@@ -13,9 +13,9 @@ metadata:
 
 Use this skill when the user asks to monitor, watch, track, or alert on web
 changes over time. Monitors are long-running server-side jobs. Phoenix provides
-`parallel-cli` and `PARALLEL_API_KEY` at runtime. Do not print, paste, persist,
-echo, or include the API key in command output, logs, reports, or final
-responses.
+authenticated `parallel-cli` at runtime. Do not inspect, print, paste, persist,
+echo, or include Parallel credentials in command output, logs, reports, or
+final responses.
 
 ## Decide The Action
 

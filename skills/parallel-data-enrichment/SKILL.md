@@ -12,9 +12,10 @@ metadata:
 # Parallel Data Enrichment
 
 Use this skill when the user wants to add web-sourced columns to a list of
-companies, people, products, or other entities. Phoenix provides `parallel-cli`
-and `PARALLEL_API_KEY` at runtime. Do not print, paste, persist, echo, or
-include the API key in command output, logs, reports, or final responses.
+companies, people, products, or other entities. Phoenix provides authenticated
+`parallel-cli` at runtime. Do not inspect, print, paste, persist, echo, or
+include Parallel credentials in command output, logs, reports, or final
+responses.
 
 ## Before Starting
 

@@ -19,7 +19,6 @@ terminal:
   env_passthrough:
     - SLACK_BOT_TOKEN
     - SLACK_TOKEN
-    - PARALLEL_API_KEY
     - KERNEL_API_KEY
 
 agent:

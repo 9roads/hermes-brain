@@ -13,9 +13,10 @@ metadata:
 
 Use this skill for Parallel Task-style deep research. It is slower and more
 expensive than `parallel-web-search`; use search for normal lookup,
-fact-checking, and lightweight research. Phoenix provides `parallel-cli` and
-`PARALLEL_API_KEY` at runtime. Do not print, paste, persist, echo, or include
-the API key in command output, logs, reports, or final responses.
+fact-checking, and lightweight research. Phoenix provides authenticated
+`parallel-cli` at runtime. Do not inspect, print, paste, persist, echo, or
+include Parallel credentials in command output, logs, reports, or final
+responses.
 
 ## When To Use
 

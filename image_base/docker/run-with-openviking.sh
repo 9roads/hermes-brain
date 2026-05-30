@@ -148,6 +148,67 @@ ensure_parallel_cli() {
   parallel-cli --version >/dev/null
 }
 
+configure_parallel_cli() {
+  local config_dir="$profile_home_dir/.config/parallel-web-tools"
+  local auth_file="$config_dir/auth.json"
+  local previous_umask
+  local status
+
+  if [ -z "${PARALLEL_API_KEY:-}" ]; then
+    echo "[parallel] PARALLEL_API_KEY is not set; Parallel CLI auth was not initialized"
+    return 0
+  fi
+
+  previous_umask="$(umask)"
+  umask 077
+  mkdir -p "$config_dir"
+
+  if python - "$auth_file" <<'PY'
+import json
+import os
+from pathlib import Path
+import sys
+
+api_key = os.environ.get("PARALLEL_API_KEY", "")
+if not api_key:
+    raise SystemExit("PARALLEL_API_KEY is not set")
+
+auth_file = Path(sys.argv[1])
+tmp_file = auth_file.with_name(f"{auth_file.name}.tmp.{os.getpid()}")
+payload = {
+    "version": 1,
+    "selected_org_id": "phoenix",
+    "orgs": {
+        "phoenix": {
+            "api_key": api_key,
+            "org_name": "Phoenix",
+        }
+    },
+    "client_id": None,
+}
+
+tmp_file.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+tmp_file.chmod(0o600)
+os.replace(tmp_file, auth_file)
+auth_file.chmod(0o600)
+PY
+  then
+    :
+  else
+    status=$?
+    umask "$previous_umask"
+    return "$status"
+  fi
+
+  chmod 0700 "$config_dir" 2>/dev/null || true
+  env -u PARALLEL_API_KEY HOME="$profile_home_dir" parallel-cli auth --json >/dev/null || {
+    status=$?
+    umask "$previous_umask"
+    return "$status"
+  }
+  umask "$previous_umask"
+}
+
 ensure_agent_browser_cli() {
   if ! command -v agent-browser >/dev/null 2>&1; then
     echo "[phoenix] agent-browser CLI is not available on PATH" >&2
@@ -333,6 +394,7 @@ configure_bun
 ensure_codex_cli
 configure_codex_cli
 ensure_phoenix_profile
+configure_parallel_cli
 ensure_nori_slack_skill
 ensure_loisa_viking_skill
 ensure_default_kanban_board_name

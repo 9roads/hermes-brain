@@ -46,11 +46,12 @@ are initialized with `bun init --react=shadcn --yes` and
 On gateway startup, the wrapper installs or updates the Phoenix Hermes profile,
 verifies required CLIs including `parallel-cli` and `agent-browser`, verifies
 the profile-owned `nori-slack-cli` and `loisa-viking-cli` skills exist,
-initializes Codex CLI API-key auth from `OPENAI_API_KEY`, names the default
-Kanban board `General Tasks` when it still has Hermes' default display name,
-starts OpenViking from `/opt/data/openviking`, and then runs the requested
-Hermes command. The image sets `AGENT_BROWSER_PROVIDER=kernel`; Phoenix passes
-only `KERNEL_API_KEY` for remote browser automation at runtime.
+initializes Codex CLI API-key auth from `OPENAI_API_KEY`, seeds Parallel CLI
+auth under the profile home from `PARALLEL_API_KEY`, names the default Kanban
+board `General Tasks` when it still has Hermes' default display name, starts
+OpenViking from `/opt/data/openviking`, and then runs the requested Hermes
+command. The image sets `AGENT_BROWSER_PROVIDER=kernel`; Phoenix passes only
+`KERNEL_API_KEY` for remote browser automation at runtime.
 
 Codex CLI auth is runtime state, not a baked image secret. The wrapper stores
 Codex config and API-key login cache under `/opt/data/codex` by default. When
