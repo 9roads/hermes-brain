@@ -10,9 +10,11 @@ from typing import Any
 LOGGER = logging.getLogger(__name__)
 
 PLUGIN_ID = "phoenix-slack-thread-gate"
-DEFAULT_THREAD_GATE_MODEL = "gpt-5.5"
-DEFAULT_THREAD_GATE_REASONING_EFFORT = "medium"
-VALID_REASONING_EFFORTS = {"minimal", "low", "medium", "high", "xhigh"}
+DEFAULT_THREAD_GATE_PROVIDER = "openrouter"
+DEFAULT_THREAD_GATE_MODEL = "deepseek/deepseek-v4-pro"
+THREAD_GATE_MAX_ATTEMPTS = 2
+THREAD_GATE_MAX_TOKENS = 300
+THREAD_GATE_TIMEOUT_SECONDS = 45
 PATCH_MARKER = "__phoenix_slack_thread_gate_patched__"
 ORIGINAL_HANDLE_ATTR = "_phoenix_slack_thread_gate_original_handle_message"
 CONTEXT_ATTR = "_phoenix_slack_thread_gate_context"
@@ -44,7 +46,10 @@ THREAD_GATE_INSTRUCTIONS = (
     "appear connected to Phoenix/Hermes/Loisa. Return should_respond=false only "
     "when the latest message is clearly unrelated human-to-human conversation, "
     "side chatter between people, a status update not meant for the assistant, "
-    "or a message addressed to someone else. When uncertain, choose true."
+    "or a message addressed to someone else. When uncertain, choose true. "
+    "Return exactly one json object and no prose. Do not return an empty response. "
+    "Example json output: "
+    '{"should_respond": true, "reason": "latest reply plausibly continues the assistant thread"}.'
 )
 
 
@@ -200,45 +205,67 @@ async def classify_thread_reply(event: Any, ctx: Any) -> dict[str, Any]:
     )
     if not callable(complete_structured):
         return {
-            "should_respond": False,
-            "reason": "thread gate LLM unavailable",
+            "should_respond": True,
+            "reason": "thread gate LLM unavailable; defaulting to yes",
         }
 
     prompt = build_prompt(event)
     config_entry = configured_thread_gate_entry()
+    provider = configured_thread_gate_provider(config_entry)
     model = configured_thread_gate_model(config_entry)
-    reasoning_effort = configured_thread_gate_reasoning_effort(config_entry)
-    try:
-        kwargs = {
-            "instructions": THREAD_GATE_INSTRUCTIONS,
-            "input": [{"type": "text", "text": prompt}],
-            "json_schema": THREAD_GATE_SCHEMA,
-            "json_mode": True,
-            "schema_name": "slack_thread_gate_decision",
-            "model": model,
-            "reasoning_effort": reasoning_effort,
-            "purpose": "slack_thread_gate",
-        }
-        result = complete_structured_with_fallback(complete_structured, kwargs)
-        if inspect.isawaitable(result):
-            result = await result
-    except Exception as exc:
-        LOGGER.info("Slack thread gate classifier failed: %s", exc)
-        return {
-            "should_respond": False,
-            "reason": "classifier error",
-        }
 
-    parsed = parse_structured_result(result)
-    if isinstance(parsed, dict) and isinstance(parsed.get("should_respond"), bool):
+    kwargs = {
+        "instructions": THREAD_GATE_INSTRUCTIONS,
+        "input": [{"type": "text", "text": prompt}],
+        "json_mode": True,
+        "schema_name": "slack_thread_gate_decision",
+        "provider": provider,
+        "model": model,
+        "max_tokens": THREAD_GATE_MAX_TOKENS,
+        "timeout": THREAD_GATE_TIMEOUT_SECONDS,
+        "purpose": "slack_thread_gate",
+    }
+
+    for attempt in range(1, THREAD_GATE_MAX_ATTEMPTS + 1):
+        try:
+            result = complete_structured(**kwargs)
+            if inspect.isawaitable(result):
+                result = await result
+        except Exception as exc:
+            LOGGER.info(
+                "Slack thread gate classifier attempt %d failed: %s",
+                attempt,
+                exc,
+            )
+            if attempt < THREAD_GATE_MAX_ATTEMPTS:
+                continue
+            return {
+                "should_respond": True,
+                "reason": "classifier error; defaulting to yes",
+            }
+
+        parsed = parse_structured_result(result)
+        if isinstance(parsed, dict) and isinstance(parsed.get("should_respond"), bool):
+            return {
+                "should_respond": parsed["should_respond"],
+                "reason": clean_text(parsed.get("reason"), max_length=300) or "model decision",
+            }
+
+        LOGGER.info(
+            "Slack thread gate classifier attempt %d returned empty or invalid json",
+            attempt,
+        )
+        if attempt < THREAD_GATE_MAX_ATTEMPTS:
+            continue
+
         return {
-            "should_respond": parsed["should_respond"],
-            "reason": clean_text(parsed.get("reason"), max_length=300) or "model decision",
+            "should_respond": True,
+            "reason": "classifier returned empty or invalid json; defaulting to yes",
         }
 
     return {
-        "should_respond": False,
-        "reason": "classifier returned an invalid decision",
+        "should_respond": True,
+        "reason": "classifier exhausted retries; defaulting to yes",
     }
 
 
@@ -273,39 +300,20 @@ def configured_thread_gate_entry() -> dict[str, Any]:
     return {}
 
 
+def configured_thread_gate_provider(entry: dict[str, Any] | None = None) -> str:
+    if entry is None:
+        entry = configured_thread_gate_entry()
+
+    configured = clean_text(entry.get("provider"))
+    return configured or DEFAULT_THREAD_GATE_PROVIDER
+
+
 def configured_thread_gate_model(entry: dict[str, Any] | None = None) -> str:
     if entry is None:
         entry = configured_thread_gate_entry()
 
     configured = clean_text(entry.get("model"))
     return configured or DEFAULT_THREAD_GATE_MODEL
-
-
-def configured_thread_gate_reasoning_effort(entry: dict[str, Any] | None = None) -> str:
-    if entry is None:
-        entry = configured_thread_gate_entry()
-
-    raw_effort = entry.get("reasoning_effort")
-    configured = clean_text(raw_effort).lower()
-    if configured in VALID_REASONING_EFFORTS:
-        return configured
-
-    return DEFAULT_THREAD_GATE_REASONING_EFFORT
-
-
-def complete_structured_with_fallback(
-    complete_structured: Any, kwargs: dict[str, Any]
-) -> Any:
-    try:
-        return complete_structured(**kwargs)
-    except TypeError as exc:
-        if "reasoning_effort" not in kwargs or "reasoning_effort" not in str(exc):
-            raise
-
-        fallback_kwargs = dict(kwargs)
-        fallback_kwargs.pop("reasoning_effort", None)
-        LOGGER.debug("Slack thread gate LLM does not support reasoning_effort: %s", exc)
-        return complete_structured(**fallback_kwargs)
 
 
 def parse_structured_result(result: Any) -> Any:

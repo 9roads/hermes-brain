@@ -85,8 +85,12 @@ class SlackThreadGateTests(unittest.TestCase):
 
         self.assertEqual(adapter.handled, [])
         self.assertEqual(len(ctx.llm.calls), 1)
-        self.assertEqual(ctx.llm.calls[0]["model"], "gpt-5.5")
-        self.assertEqual(ctx.llm.calls[0]["reasoning_effort"], "medium")
+        self.assertEqual(ctx.llm.calls[0]["provider"], "openrouter")
+        self.assertEqual(ctx.llm.calls[0]["model"], "deepseek/deepseek-v4-pro")
+        self.assertNotIn("reasoning_effort", ctx.llm.calls[0])
+        self.assertIsNone(ctx.llm.calls[0]["json_schema"])
+        self.assertIn("json", ctx.llm.calls[0]["instructions"].lower())
+        self.assertIn("Do not return an empty response", ctx.llm.calls[0]["instructions"])
 
     def test_unmentioned_slack_thread_reply_can_be_allowed(self) -> None:
         slack_module = install_hermes_stubs()
@@ -99,10 +103,10 @@ class SlackThreadGateTests(unittest.TestCase):
 
         self.assertEqual(len(adapter.handled), 1)
         self.assertEqual(len(ctx.llm.calls), 1)
-        self.assertEqual(ctx.llm.calls[0]["model"], "gpt-5.5")
-        self.assertEqual(ctx.llm.calls[0]["reasoning_effort"], "medium")
+        self.assertEqual(ctx.llm.calls[0]["provider"], "openrouter")
+        self.assertEqual(ctx.llm.calls[0]["model"], "deepseek/deepseek-v4-pro")
 
-    def test_classifier_failure_skips_unmentioned_thread_reply(self) -> None:
+    def test_classifier_failure_allows_unmentioned_thread_reply(self) -> None:
         slack_module = install_hermes_stubs()
         ctx = FakePluginContext(FakeLlm(True, error=RuntimeError("boom")))
         plugin = load_plugin_module()
@@ -111,10 +115,34 @@ class SlackThreadGateTests(unittest.TestCase):
 
         asyncio.run(slack_module.SlackAdapter.handle_message(adapter, slack_event()))
 
-        self.assertEqual(adapter.handled, [])
-        self.assertEqual(len(ctx.llm.calls), 1)
+        self.assertEqual(len(adapter.handled), 1)
+        self.assertEqual(len(ctx.llm.calls), 2)
 
-    def test_llm_without_reasoning_effort_still_handles_gate(self) -> None:
+    def test_empty_classifier_response_retries_then_allows(self) -> None:
+        slack_module = install_hermes_stubs()
+        ctx = FakePluginContext(FakeSequenceLlm(["", ""]))
+        plugin = load_plugin_module()
+        plugin.register(ctx)
+        adapter = slack_module.SlackAdapter()
+
+        asyncio.run(slack_module.SlackAdapter.handle_message(adapter, slack_event()))
+
+        self.assertEqual(len(adapter.handled), 1)
+        self.assertEqual(len(ctx.llm.calls), 2)
+
+    def test_empty_classifier_response_retries_then_uses_decision(self) -> None:
+        slack_module = install_hermes_stubs()
+        ctx = FakePluginContext(FakeSequenceLlm(["", {"should_respond": False, "reason": "side chat"}]))
+        plugin = load_plugin_module()
+        plugin.register(ctx)
+        adapter = slack_module.SlackAdapter()
+
+        asyncio.run(slack_module.SlackAdapter.handle_message(adapter, slack_event()))
+
+        self.assertEqual(adapter.handled, [])
+        self.assertEqual(len(ctx.llm.calls), 2)
+
+    def test_legacy_llm_still_handles_gate(self) -> None:
         slack_module = install_hermes_stubs()
         ctx = FakePluginContext(FakeLegacyLlm(True))
         plugin = load_plugin_module()
@@ -125,7 +153,8 @@ class SlackThreadGateTests(unittest.TestCase):
 
         self.assertEqual(len(adapter.handled), 1)
         self.assertEqual(len(ctx.llm.calls), 1)
-        self.assertEqual(ctx.llm.calls[0]["model"], "gpt-5.5")
+        self.assertEqual(ctx.llm.calls[0]["provider"], "openrouter")
+        self.assertEqual(ctx.llm.calls[0]["model"], "deepseek/deepseek-v4-pro")
 
 
 class FakePluginContext:
@@ -144,11 +173,13 @@ class FakeLlm:
         *,
         instructions: str,
         input: list[dict[str, Any]],
-        json_schema: dict[str, Any],
+        json_schema: dict[str, Any] | None = None,
         json_mode: bool,
         schema_name: str,
+        provider: str,
         model: str,
-        reasoning_effort: str,
+        max_tokens: int,
+        timeout: int,
         purpose: str,
     ) -> dict[str, Any]:
         self.calls.append(
@@ -158,8 +189,10 @@ class FakeLlm:
                 "json_schema": json_schema,
                 "json_mode": json_mode,
                 "schema_name": schema_name,
+                "provider": provider,
                 "model": model,
-                "reasoning_effort": reasoning_effort,
+                "max_tokens": max_tokens,
+                "timeout": timeout,
                 "purpose": purpose,
             }
         )
@@ -177,10 +210,13 @@ class FakeLegacyLlm(FakeLlm):
         *,
         instructions: str,
         input: list[dict[str, Any]],
-        json_schema: dict[str, Any],
+        json_schema: dict[str, Any] | None = None,
         json_mode: bool,
         schema_name: str,
+        provider: str,
         model: str,
+        max_tokens: int,
+        timeout: int,
         purpose: str,
     ) -> dict[str, Any]:
         self.calls.append(
@@ -190,7 +226,10 @@ class FakeLegacyLlm(FakeLlm):
                 "json_schema": json_schema,
                 "json_mode": json_mode,
                 "schema_name": schema_name,
+                "provider": provider,
                 "model": model,
+                "max_tokens": max_tokens,
+                "timeout": timeout,
                 "purpose": purpose,
             }
         )
@@ -198,6 +237,18 @@ class FakeLegacyLlm(FakeLlm):
             "should_respond": self.should_respond,
             "reason": "test decision",
         }
+
+
+class FakeSequenceLlm(FakeLlm):
+    def __init__(self, responses: list[Any]) -> None:
+        super().__init__(True)
+        self.responses = list(responses)
+
+    def complete_structured(self, **kwargs: Any) -> Any:
+        self.calls.append(kwargs)
+        if self.responses:
+            return self.responses.pop(0)
+        return ""
 
 
 class FakeSlackAdapter:

@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-official_entrypoint="/opt/hermes/docker/entrypoint.sh"
+main_wrapper="/opt/hermes/image_base/main-wrapper.sh"
 openviking_runner="/opt/hermes/image_base/run-with-openviking.sh"
 
-exec "$official_entrypoint" "$openviking_runner" "$@"
+if [ "$$" -eq 1 ] && [ -x /init ]; then
+  exec /init "$main_wrapper" "$@"
+fi
+
+if [ "$(id -u)" -eq 0 ]; then
+  if [ -x /command/s6-setuidgid ]; then
+    exec /command/s6-setuidgid hermes "$openviking_runner" "$@"
+  fi
+
+  echo "[phoenix] cannot drop root privileges: /command/s6-setuidgid is unavailable" >&2
+  exit 126
+fi
+
+exec "$openviking_runner" "$@"

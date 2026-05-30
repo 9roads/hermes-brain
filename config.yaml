@@ -5,6 +5,12 @@ model:
   api_key: ${OPENAI_API_KEY}
   api_mode: codex_responses
 
+fallback_providers:
+  - provider: openrouter
+    model: moonshotai/kimi-k2.6
+    key_env: OPENROUTER_API_KEY
+    reasoning_effort: xhigh
+
 approvals:
   mode: off
 
@@ -23,8 +29,11 @@ agent:
 
 auxiliary:
   compression:
-    provider: main
-    model: gpt-5.4-mini
+    provider: openrouter
+    model: deepseek/deepseek-v4-flash
+  title_generation:
+    provider: openrouter
+    model: deepseek/deepseek-v4-flash
 
 context:
   engine: lcm
@@ -40,12 +49,15 @@ plugins:
     - phoenix-openai-text-verbosity
   entries:
     phoenix-slack-thread-gate:
-      model: gpt-5.5
-      reasoning_effort: medium
+      provider: openrouter
+      model: deepseek/deepseek-v4-pro
       llm:
+        allow_provider_override: true
+        allowed_providers:
+          - openrouter
         allow_model_override: true
         allowed_models:
-          - gpt-5.5
+          - deepseek/deepseek-v4-pro
 
 display:
   busy_input_mode: steer

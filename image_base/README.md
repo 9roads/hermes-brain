@@ -9,6 +9,12 @@ Build the custom image from the repository root:
 docker build -t phoenix-hermes-openviking:local hermes/image_base
 ```
 
+The image extends
+`nousresearch/hermes-agent:v2026.5.29.2@sha256:2bba4ab37729ebdd864d4caf277b24fec4cd8bfc2855185fd9f4c90f9bf7bfa3`.
+That upstream release uses s6-overlay as PID 1, so the Phoenix image entrypoint
+is `/init /opt/hermes/image_base/main-wrapper.sh`. The wrapper drops to the
+`hermes` user and runs the Phoenix OpenViking bootstrap as the s6 main program.
+
 Run it with a persistent `/opt/data` volume:
 
 ```bash
@@ -60,9 +66,13 @@ All other memory behavior uses OpenViking's native categories. The provider does
 not expose model tools; interactive memory/resource work uses the profile-owned
 `loisa-viking-cli` skill and the `ov` or `openviking` CLI.
 
-The wrapper preserves the official Hermes entrypoint. Phoenix setup and
-OpenViking startup happen after the official entrypoint has bootstrapped
-`/opt/data` and dropped to the `hermes` user.
+The wrapper preserves upstream s6 stage2 setup. Phoenix setup and OpenViking
+startup happen after s6 has bootstrapped `/opt/data`; the Phoenix main wrapper
+then drops to the `hermes` user before running the gateway command.
+`run-with-openviking.sh` also defaults `HERMES_GATEWAY_NO_SUPERVISE=1` so
+upstream Hermes does not redirect `gateway run` into its own per-profile s6
+service. Phoenix keeps a single foreground gateway process as the container main
+program for Nomad.
 
 The image also installs a Python startup patch for Slack Socket Mode. When
 `SLACK_SOCKET_API_BASE` is set, Socket Mode `apps.connections.open` uses that

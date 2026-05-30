@@ -22,7 +22,8 @@ profile_bin_dir="$profile_home_dir/.local/bin"
 
 export HERMES_PROFILE_NAME="$profile_name"
 export PHOENIX_HERMES_PROFILE_NAME="${PHOENIX_HERMES_PROFILE_NAME:-$profile_name}"
-export PATH="/opt/hermes/.venv/bin:$root_bin_dir:$profile_bin_dir:$PATH"
+export HERMES_GATEWAY_NO_SUPERVISE="${HERMES_GATEWAY_NO_SUPERVISE:-1}"
+export PATH="/opt/hermes/bin:/opt/hermes/.venv/bin:$root_bin_dir:$profile_bin_dir:$PATH"
 
 load_env_file() {
   local env_file="$1"

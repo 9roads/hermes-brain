@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG HERMES_BASE_IMAGE=nousresearch/hermes-agent:sha-bec2250d2c8349fc85201bcd1aa39bcaa766a555
+ARG HERMES_BASE_IMAGE=nousresearch/hermes-agent:v2026.5.29.2@sha256:2bba4ab37729ebdd864d4caf277b24fec4cd8bfc2855185fd9f4c90f9bf7bfa3
 ARG NODE_VERSION=24.16.0
 ARG BUN_VERSION=1.3.14
 ARG PNPM_VERSION=11.3.0
@@ -161,10 +161,16 @@ RUN set -eux; \
 
 COPY --chmod=0755 docker/codex /usr/local/bin/codex
 COPY --chmod=0755 docker/entrypoint.sh /opt/hermes/image_base/entrypoint.sh
+COPY --chmod=0755 docker/main-wrapper.sh /opt/hermes/image_base/main-wrapper.sh
 COPY --chown=hermes:hermes plugins/memory/openviking_memory/ /opt/hermes/plugins/memory/openviking_memory/
 COPY --chown=hermes:hermes openviking/custom-memory/ /opt/hermes/openviking/custom-memory/
 COPY --chown=hermes:hermes openviking/ov.conf openviking/ovcli.conf /opt/hermes/openviking/
 COPY --chmod=0755 docker/run-with-openviking.sh /opt/hermes/image_base/run-with-openviking.sh
+
+RUN set -eux; \
+    chown -R hermes:hermes /opt/data; \
+    chmod 0700 /opt/data; \
+    install -d -o hermes -g hermes -m 0750 /opt/data/logs
 
 ENV BUN_INSTALL_GLOBAL_STORE=1
 ENV OPENVIKING_ENDPOINT=http://127.0.0.1:1933
@@ -172,4 +178,4 @@ ENV OPENVIKING_ACCOUNT=default
 ENV OPENVIKING_USER_SPACE=default
 ENV OPENVIKING_AGENT_ID=hermes-memory
 
-ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/opt/hermes/image_base/entrypoint.sh"]
+ENTRYPOINT ["/init", "/opt/hermes/image_base/main-wrapper.sh"]
