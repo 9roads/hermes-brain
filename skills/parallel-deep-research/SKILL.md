@@ -24,6 +24,8 @@ Use this skill when the user explicitly asks for deep research, exhaustive
 coverage, a comprehensive report, or a thorough investigation that needs
 synthesis across many sources.
 
+Keep in mind that research is powerful but expensive and can take a while to complete. Do not run multiple research tasks in sequence or in parallel. Prefer at most one research task per session.
+
 ## Step 1 - Start The Task
 
 Choose a descriptive filename based on the topic, using lowercase words with
@@ -51,14 +53,14 @@ parallel-cli research run "$ARGUMENTS" --processor lite-fast --text --no-wait --
 
 Processor defaults:
 
-| Processor | Expected latency | Use when |
-| --- | --- | --- |
-| `lite-fast` | 10-60s | Quick follow-ups |
-| `base-fast` | 15-100s | Simple questions |
-| `core-fast` | 1-5 min | Moderate research |
-| `pro-fast` | 2-10 min | Default depth/speed balance |
-| `ultra-fast` | 5-25 min | Multi-source deep research |
-| `ultra2x-fast` / `ultra4x-fast` / `ultra8x-fast` | up to 2 hr | Hardest explicit requests |
+| Processor                                        | Expected latency | Use when                    |
+| ------------------------------------------------ | ---------------- | --------------------------- |
+| `lite-fast`                                      | 10-60s           | Quick follow-ups            |
+| `base-fast`                                      | 15-100s          | Simple questions            |
+| `core-fast`                                      | 1-5 min          | Moderate research           |
+| `pro-fast`                                       | 2-10 min         | Default depth/speed balance |
+| `ultra-fast`                                     | 5-25 min         | Multi-source deep research  |
+| `ultra2x-fast` / `ultra4x-fast` / `ultra8x-fast` | up to 2 hr       | Hardest explicit requests   |
 
 Default to `-fast` processors unless the user asks about news from the last day
 or two, where non-fast processors may fetch fresher data.

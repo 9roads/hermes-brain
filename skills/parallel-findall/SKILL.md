@@ -25,6 +25,8 @@ final responses.
 | Webpage results, quick answers, current facts | `parallel-web-search`    |
 | Narrative reports or deep analysis            | `parallel-deep-research` |
 
+Keep in mind that findall is powerful but expensive and can take a while to complete. Do not run multiple findall runs in sequence or in parallel. Prefer at most one findall run per session.
+
 ## Step 1 - Start The Run
 
 ```bash
