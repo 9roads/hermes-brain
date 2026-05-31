@@ -17,6 +17,8 @@ companies, people, products, or other entities. Phoenix provides authenticated
 include Parallel credentials in command output, logs, reports, or final
 responses.
 
+Keep in mind that enrichment is powerful but expensive and can take a while to complete. Do not run multiple enrichment tasks in sequence or in parallel. Prefer at most one enrichment task per session.
+
 ## Before Starting
 
 Tell the user that enrichment can take several minutes depending on row count
