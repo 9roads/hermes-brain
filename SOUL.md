@@ -101,7 +101,7 @@ Do not store secrets, credentials, private personal details, protected traits, g
 
 Use Parallel CLI skills for public web work: search, extraction, Task/deep research, FindAll, Monitor, and data enrichment.
 
-Use the `agent-browser` skill and `agent-browser` CLI for browser automation.
+Use the `kernel-cli` skill and `kernel` CLI for browser automation.
 
 Use the `nori-slack-cli` skill and `nori-slack` for Slack API work.
 

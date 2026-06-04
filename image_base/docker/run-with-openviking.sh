@@ -209,18 +209,13 @@ PY
   umask "$previous_umask"
 }
 
-ensure_agent_browser_cli() {
-  if ! command -v agent-browser >/dev/null 2>&1; then
-    echo "[phoenix] agent-browser CLI is not available on PATH" >&2
+ensure_kernel_cli() {
+  if ! command -v kernel >/dev/null 2>&1; then
+    echo "[phoenix] kernel CLI is not available on PATH" >&2
     exit 1
   fi
 
-  if [ "${AGENT_BROWSER_PROVIDER:-}" != "kernel" ]; then
-    echo "[phoenix] AGENT_BROWSER_PROVIDER must be kernel" >&2
-    exit 1
-  fi
-
-  agent-browser --version >/dev/null
+  kernel --version >/dev/null
 }
 
 ensure_bun_cli() {
@@ -388,7 +383,7 @@ ensure_openviking_cli
 ensure_composio_cli
 ensure_nori_slack_cli
 ensure_parallel_cli
-ensure_agent_browser_cli
+ensure_kernel_cli
 ensure_bun_cli
 configure_bun
 ensure_codex_cli

@@ -1,11 +1,10 @@
 name: phoenix
-version: 0.2.104
+version: 0.2.105
 description: Phoenix OpenViking Hermes profile
 distribution_owned:
   # image_base/ is image build source and must not be installed as profile payload.
   - SOUL.md
   - config.yaml
-  - mcp.json
   - skills
   - plugins
   - cron

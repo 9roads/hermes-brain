@@ -107,12 +107,8 @@ if not shutil.which("parallel-cli"):
     print("parallel-cli is not available on PATH", file=sys.stderr)
     sys.exit(1)
 
-if not shutil.which("agent-browser"):
-    print("agent-browser CLI is not available on PATH", file=sys.stderr)
-    sys.exit(1)
-
-if os.environ.get("AGENT_BROWSER_PROVIDER") != "kernel":
-    print("AGENT_BROWSER_PROVIDER must be kernel", file=sys.stderr)
+if not shutil.which("kernel"):
+    print("kernel CLI is not available on PATH", file=sys.stderr)
     sys.exit(1)
 
 print("ok")
