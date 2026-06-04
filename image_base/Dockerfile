@@ -135,6 +135,7 @@ RUN set -eux; \
     mkdir -p /opt/hermes/kernel-cli; \
     cd /opt/hermes/kernel-cli; \
     printf '{"private":true,"dependencies":{"@onkernel/cli":"%s"}}\n' "$KERNEL_CLI_VERSION" > package.json; \
+    printf '%s\n' 'allowBuilds:' '  "@onkernel/cli": true' > pnpm-workspace.yaml; \
     pnpm install --prod --no-lockfile; \
     test -x /opt/hermes/kernel-cli/node_modules/.bin/kernel; \
     printf '%s\n' '#!/bin/sh' 'exec /opt/hermes/kernel-cli/node_modules/.bin/kernel "$@"' > /usr/local/bin/kernel; \

@@ -387,6 +387,8 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("env -u PARALLEL_API_KEY", runner)
         self.assertIn("@onkernel/cli", dockerfile)
         self.assertIn("KERNEL_CLI_VERSION=0.19.3", dockerfile)
+        self.assertIn("allowBuilds:", dockerfile)
+        self.assertIn('"@onkernel/cli": true', dockerfile)
         self.assertIn("kernel --version", dockerfile)
         self.assertNotIn("agent" + "-browser", dockerfile)
         self.assertNotIn("AGENT" + "_BROWSER_PROVIDER", dockerfile)
