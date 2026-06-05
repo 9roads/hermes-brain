@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from .client import OpenVikingClient
 from .config import ProviderConfig
-from .prompting import build_capture_message, compact_text
+from .prompting import build_capture_message
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +49,6 @@ class SessionSyncManager:
         self.client.ensure_session(session_id)
         with self._lock:
             self._ensured_sessions.add(session_id)
-
-    def _trim_message(self, content: str) -> str:
-        return compact_text(content, self.config.max_message_chars)
 
     def _storage_role_id(self) -> str:
         return self.config.user_space
@@ -123,7 +120,7 @@ class SessionSyncManager:
         return str(content)
 
     def _text_part(self, content: Any) -> dict[str, str] | None:
-        text = self._trim_message(self._message_text(content).strip())
+        text = self._message_text(content).strip()
         if not text:
             return None
         return {"type": "text", "text": text}
@@ -160,7 +157,7 @@ class SessionSyncManager:
         try:
             parsed = json.loads(raw)
         except json.JSONDecodeError:
-            return {"raw_arguments": compact_text(raw, 4000)}
+            return {"raw_arguments": raw}
         if isinstance(parsed, dict):
             return parsed
         return {"arguments": parsed}
@@ -227,7 +224,7 @@ class SessionSyncManager:
             )
             entry = {
                 "name": str(message.get("name") or message.get("tool_name") or "unknown"),
-                "content": self._trim_message(self._message_text(message.get("content"))),
+                "content": self._message_text(message.get("content")).strip(),
             }
             if tool_id:
                 matched.setdefault(tool_id, []).append(entry)
@@ -255,7 +252,7 @@ class SessionSyncManager:
             "tool_id": tool_id or "unknown",
             "tool_name": tool_name or "unknown",
             "tool_input": tool_input,
-            "tool_output": self._trim_message(tool_output),
+            "tool_output": tool_output.strip(),
             "tool_status": status,
         }
 

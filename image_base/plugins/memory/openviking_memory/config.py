@@ -116,7 +116,6 @@ class ProviderConfig:
     search_limit: int = 8
     max_prefetch_chars: int = 3200
     max_tool_chars: int = 8000
-    max_message_chars: int = 20000
     max_read_abstract_chars: int = 1200
     max_read_overview_chars: int = 4000
     max_read_full_chars: int = 10000
@@ -149,7 +148,6 @@ class ProviderConfig:
             search_limit=_env_int("OPENVIKING_MEMORY_SEARCH_LIMIT", 8, minimum=1, maximum=25),
             max_prefetch_chars=_env_int("OPENVIKING_MEMORY_MAX_PREFETCH_CHARS", 3200, minimum=800),
             max_tool_chars=_env_int("OPENVIKING_MEMORY_MAX_TOOL_CHARS", 8000, minimum=1000),
-            max_message_chars=_env_int("OPENVIKING_MEMORY_MAX_MESSAGE_CHARS", 20000, minimum=1000),
             max_read_abstract_chars=_env_int("OPENVIKING_MEMORY_READ_ABSTRACT_CHARS", 1200, minimum=300),
             max_read_overview_chars=_env_int("OPENVIKING_MEMORY_READ_OVERVIEW_CHARS", 4000, minimum=800),
             max_read_full_chars=_env_int("OPENVIKING_MEMORY_READ_FULL_CHARS", 10000, minimum=1000),

@@ -58,6 +58,7 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
     python -c 'import linkdapi' && \
     /usr/local/bin/python -c 'import tiktoken' && \
     /usr/local/bin/python -c 'import linkdapi' && \
+    ov language en >/dev/null && \
     python --version && \
     hermes --help >/dev/null && \
     /usr/local/bin/hermes --help >/dev/null && \

@@ -218,6 +218,54 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
         self.assertEqual(assistant_message["role"], "assistant")
         self.assertEqual(assistant_message["parts"], [{"type": "text", "text": "hi"}])
 
+    def test_session_sync_does_not_truncate_text_or_tool_output(self) -> None:
+        plugin = load_provider_package()
+        config = plugin.ProviderConfig(endpoint="http://openviking.test", user_space="workspace")
+        client = FakeClient(config)
+        sync = plugin.SessionSyncManager(client, config)
+        long_user = "user-prefix-" + ("u" * 25000)
+        long_assistant = "assistant-prefix-" + ("a" * 25000)
+        long_tool_input = "{not json " + ("i" * 5000)
+        long_tool_output = "tool-prefix-" + ("t" * 25000)
+
+        try:
+            sync.enqueue_messages(
+                config.openviking_session_id("startup"),
+                long_user,
+                long_assistant,
+                [
+                    {"role": "user", "content": "runtime user should be replaced"},
+                    {
+                        "role": "assistant",
+                        "content": long_assistant,
+                        "tool_calls": [
+                            {
+                                "id": "call_long",
+                                "type": "function",
+                                "function": {"name": "terminal", "arguments": long_tool_input},
+                            }
+                        ],
+                    },
+                    {
+                        "role": "tool",
+                        "name": "terminal",
+                        "tool_call_id": "call_long",
+                        "content": long_tool_output,
+                    },
+                ],
+            )
+            self.assertTrue(sync.flush(timeout=1))
+        finally:
+            sync.shutdown()
+
+        _session_id, batch = client.add_messages_calls[0]
+        self.assertEqual(batch[0]["parts"][0]["text"], long_user)
+        tool_turn_parts = batch[1]["parts"]
+        self.assertEqual(tool_turn_parts[0]["text"], long_assistant)
+        self.assertEqual(tool_turn_parts[1]["tool_input"], {"raw_arguments": long_tool_input})
+        self.assertEqual(tool_turn_parts[1]["tool_output"], long_tool_output)
+        self.assertNotIn("[truncated by OpenViking memory]", json.dumps(batch))
+
     def test_session_sync_converts_tool_calls_to_tool_parts(self) -> None:
         plugin = load_provider_package()
         config = plugin.ProviderConfig(endpoint="http://openviking.test", user_space="workspace")

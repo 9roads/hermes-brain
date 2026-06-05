@@ -121,6 +121,43 @@ ensure_openviking_cli() {
   fi
 }
 
+configure_openviking_cli_language() {
+  HOME="$root_home_dir" ov language en >/dev/null
+  HOME="$profile_home_dir" ov language en >/dev/null
+}
+
+configure_openviking_cli_runtime() {
+  local cli_config_file="$1"
+  local tmp_file="$cli_config_file.tmp.$$"
+
+  python - "$cli_config_file" "$tmp_file" <<'PY'
+import json
+import os
+from pathlib import Path
+import sys
+
+config_file = Path(sys.argv[1])
+tmp_file = Path(sys.argv[2])
+
+try:
+    config = json.loads(config_file.read_text(encoding="utf-8"))
+except FileNotFoundError:
+    config = {}
+
+if not isinstance(config, dict):
+    config = {}
+
+config["url"] = os.environ["OPENVIKING_ENDPOINT"]
+config["account"] = os.environ["OPENVIKING_ACCOUNT"]
+config["user"] = os.environ["OPENVIKING_USER"]
+config["agent_id"] = os.environ["OPENVIKING_AGENT_ID"]
+
+tmp_file.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+os.replace(tmp_file, config_file)
+PY
+  chmod 640 "$cli_config_file" 2>/dev/null || true
+}
+
 ensure_composio_cli() {
   if command -v composio >/dev/null 2>&1; then
     return 0
@@ -430,6 +467,7 @@ PY
 ensure_hermes_cli
 ensure_python
 ensure_openviking_cli
+configure_openviking_cli_language
 ensure_composio_cli
 ensure_nori_slack_cli
 ensure_parallel_cli
@@ -478,6 +516,8 @@ export OPENVIKING_ACCOUNT="${OPENVIKING_ACCOUNT:-default}"
 export OPENVIKING_USER_SPACE="${OPENVIKING_USER_SPACE:-default}"
 export OPENVIKING_USER="${OPENVIKING_USER:-$OPENVIKING_USER_SPACE}"
 export OPENVIKING_AGENT_ID="${OPENVIKING_AGENT_ID:-hermes-memory}"
+
+configure_openviking_cli_runtime "$openviking_cli_config_file"
 
 if ! command -v "$openviking_server_bin" >/dev/null 2>&1; then
   if [ -x /opt/hermes/.venv/bin/openviking-server ]; then
