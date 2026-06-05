@@ -165,11 +165,18 @@ class OpenVikingMemoryProvider(MemoryProvider):
             )
             self._prefetch_thread.start()
 
-    def sync_turn(self, user_content: str, assistant_content: str, *, session_id: str = "") -> None:
-        if not self._sync:
+    def sync_turn(
+        self,
+        user_content: str,
+        assistant_content: str,
+        *,
+        session_id: str = "",
+        messages: Optional[List[Dict[str, Any]]] = None,
+    ) -> None:
+        if not self._sync or not messages:
             return
         openviking_session_id = self._session_id_for(session_id)
-        self._sync.enqueue_turn(openviking_session_id, user_content, assistant_content)
+        self._sync.enqueue_messages(openviking_session_id, user_content, assistant_content, messages)
 
     def get_tool_schemas(self) -> List[Dict[str, Any]]:
         return []

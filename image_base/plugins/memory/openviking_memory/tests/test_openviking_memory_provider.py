@@ -154,19 +154,32 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
             "Workspace-One__already-prefixed",
         )
 
-    def test_sync_turn_uses_passed_session_id(self) -> None:
+    def test_sync_turn_requires_messages_and_uses_passed_session_id(self) -> None:
         plugin = load_provider_package()
         provider, config, _client, sync = make_provider(plugin, startup_session_id="startup")
 
         provider.sync_turn("user text", "assistant text", session_id="resumed-session")
 
-        self.assertEqual(
-            sync.enqueued_turns,
-            [(config.openviking_session_id("resumed-session"), "user text", "assistant text")],
-        )
-        self.assertNotEqual(sync.enqueued_turns[0][0], config.openviking_session_id("startup"))
+        self.assertEqual(sync.enqueued_messages, [])
 
-    def test_session_sync_keeps_company_memory_in_configured_user_space(self) -> None:
+        messages = [
+            {"role": "user", "content": "runtime user text"},
+            {"role": "assistant", "content": "assistant text"},
+        ]
+        provider.sync_turn(
+            "user text",
+            "assistant text",
+            session_id="resumed-session",
+            messages=messages,
+        )
+
+        self.assertEqual(
+            sync.enqueued_messages,
+            [(config.openviking_session_id("resumed-session"), "user text", "assistant text", messages)],
+        )
+        self.assertNotEqual(sync.enqueued_messages[0][0], config.openviking_session_id("startup"))
+
+    def test_session_sync_writes_text_turn_as_openviking_parts(self) -> None:
         plugin = load_provider_package()
         config = plugin.ProviderConfig(
             endpoint="http://openviking.test",
@@ -178,20 +191,305 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
         sync = plugin.SessionSyncManager(client, config)
 
         try:
-            sync.enqueue_turn(config.openviking_session_id("startup"), "hello", "hi")
+            sync.enqueue_messages(
+                config.openviking_session_id("startup"),
+                "hello",
+                "hi",
+                [
+                    {"role": "user", "content": "runtime context should be replaced"},
+                    {"role": "assistant", "content": "hi"},
+                ],
+            )
             self.assertTrue(sync.flush(timeout=1))
         finally:
             sync.shutdown()
 
-        self.assertEqual(len(client.add_message_calls), 2)
-        user_message = client.add_message_calls[0]
-        assistant_message = client.add_message_calls[1]
+        self.assertEqual(client.add_message_calls, [])
+        self.assertEqual(len(client.add_messages_calls), 1)
+        session_id, batch = client.add_messages_calls[0]
+        self.assertEqual(session_id, config.openviking_session_id("startup"))
+        self.assertEqual(len(batch), 2)
+        user_message = batch[0]
+        assistant_message = batch[1]
         self.assertEqual(user_message["role"], "user")
-        self.assertIsNone(user_message["role_id"])
-        self.assertIn("Source metadata:\n- actor: U123", user_message["content"])
-        self.assertIn("Message:\nhello", user_message["content"])
+        self.assertIn("Source metadata:\n- actor: U123", user_message["parts"][0]["text"])
+        self.assertIn("Message:\nhello", user_message["parts"][0]["text"])
+        self.assertNotIn("runtime context should be replaced", user_message["parts"][0]["text"])
         self.assertEqual(assistant_message["role"], "assistant")
-        self.assertIsNone(assistant_message["role_id"])
+        self.assertEqual(assistant_message["parts"], [{"type": "text", "text": "hi"}])
+
+    def test_session_sync_converts_tool_calls_to_tool_parts(self) -> None:
+        plugin = load_provider_package()
+        config = plugin.ProviderConfig(endpoint="http://openviking.test", user_space="workspace")
+        client = FakeClient(config)
+        sync = plugin.SessionSyncManager(client, config)
+
+        try:
+            sync.enqueue_messages(
+                config.openviking_session_id("startup"),
+                "clean user",
+                "done",
+                [
+                    {"role": "user", "content": "previous"},
+                    {"role": "assistant", "content": "previous answer"},
+                    {"role": "user", "content": "dirty current user"},
+                    {
+                        "role": "assistant",
+                        "content": "I will inspect it.",
+                        "tool_calls": [
+                            {
+                                "id": "call_1",
+                                "type": "function",
+                                "function": {"name": "terminal", "arguments": "{\"cmd\":\"ls\"}"},
+                            },
+                            {
+                                "id": "call_2",
+                                "type": "function",
+                                "function": {"name": "odd_tool", "arguments": "[\"unexpected\"]"},
+                            }
+                        ],
+                    },
+                    {"role": "tool", "name": "terminal", "tool_call_id": "call_1", "content": "README.md"},
+                    {"role": "tool", "name": "odd_tool", "call_id": "call_2", "content": "array ok"},
+                    {"role": "assistant", "content": "done"},
+                ],
+            )
+            self.assertTrue(sync.flush(timeout=1))
+        finally:
+            sync.shutdown()
+
+        _session_id, batch = client.add_messages_calls[0]
+        self.assertEqual(len(batch), 3)
+        self.assertEqual(batch[0]["parts"], [{"type": "text", "text": "clean user"}])
+        tool_turn_parts = batch[1]["parts"]
+        self.assertEqual(tool_turn_parts[0], {"type": "text", "text": "I will inspect it."})
+        self.assertEqual(
+            tool_turn_parts[1],
+            {
+                "type": "tool",
+                "tool_id": "call_1",
+                "tool_name": "terminal",
+                "tool_input": {"cmd": "ls"},
+                "tool_output": "README.md",
+                "tool_status": "completed",
+            },
+        )
+        self.assertEqual(
+            tool_turn_parts[2],
+            {
+                "type": "tool",
+                "tool_id": "call_2",
+                "tool_name": "odd_tool",
+                "tool_input": {"arguments": ["unexpected"]},
+                "tool_output": "array ok",
+                "tool_status": "completed",
+            },
+        )
+        self.assertEqual(batch[2]["parts"], [{"type": "text", "text": "done"}])
+
+    def test_session_sync_appends_fallback_assistant_when_final_message_is_missing(self) -> None:
+        plugin = load_provider_package()
+        config = plugin.ProviderConfig(endpoint="http://openviking.test", user_space="workspace")
+        client = FakeClient(config)
+        sync = plugin.SessionSyncManager(client, config)
+
+        try:
+            sync.enqueue_messages(
+                config.openviking_session_id("startup"),
+                "clean user",
+                "final answer",
+                [
+                    {"role": "user", "content": "dirty current user"},
+                    {
+                        "role": "assistant",
+                        "tool_calls": [
+                            {
+                                "id": "call_1",
+                                "type": "function",
+                                "function": {"name": "terminal", "arguments": "{\"cmd\":\"pwd\"}"},
+                            }
+                        ],
+                    },
+                    {"role": "tool", "name": "terminal", "tool_call_id": "call_1", "content": "/workspace"},
+                ],
+            )
+            self.assertTrue(sync.flush(timeout=1))
+        finally:
+            sync.shutdown()
+
+        _session_id, batch = client.add_messages_calls[0]
+        self.assertEqual(len(batch), 3)
+        self.assertEqual(batch[0]["parts"], [{"type": "text", "text": "clean user"}])
+        self.assertEqual(batch[1]["parts"][0]["tool_output"], "/workspace")
+        self.assertEqual(batch[2]["role"], "assistant")
+        self.assertEqual(batch[2]["parts"], [{"type": "text", "text": "final answer"}])
+
+    def test_session_sync_chunks_large_batches(self) -> None:
+        plugin = load_provider_package()
+        config = plugin.ProviderConfig(endpoint="http://openviking.test", user_space="workspace")
+        client = FakeClient(config)
+        sync = plugin.SessionSyncManager(client, config)
+        assistant_messages = [
+            {"role": "assistant", "content": f"assistant-{index}"}
+            for index in range(105)
+        ]
+
+        try:
+            sync.enqueue_messages(
+                config.openviking_session_id("startup"),
+                "clean user",
+                "assistant-104",
+                [{"role": "user", "content": "dirty current user"}, *assistant_messages],
+            )
+            self.assertTrue(sync.flush(timeout=1))
+        finally:
+            sync.shutdown()
+
+        self.assertEqual(len(client.add_messages_calls), 2)
+        first_session_id, first_batch = client.add_messages_calls[0]
+        second_session_id, second_batch = client.add_messages_calls[1]
+        self.assertEqual(first_session_id, config.openviking_session_id("startup"))
+        self.assertEqual(second_session_id, config.openviking_session_id("startup"))
+        self.assertEqual(len(first_batch), 100)
+        self.assertEqual(len(second_batch), 6)
+        self.assertEqual(first_batch[0]["parts"], [{"type": "text", "text": "clean user"}])
+        self.assertEqual(second_batch[-1]["parts"], [{"type": "text", "text": "assistant-104"}])
+
+    def test_session_sync_summarizes_multimodal_tool_outputs(self) -> None:
+        plugin = load_provider_package()
+        config = plugin.ProviderConfig(endpoint="http://openviking.test", user_space="workspace")
+        client = FakeClient(config)
+        sync = plugin.SessionSyncManager(client, config)
+        raw_image = "data:image/png;base64," + ("A" * 2000)
+
+        try:
+            sync.enqueue_messages(
+                config.openviking_session_id("startup"),
+                "clean user",
+                "done",
+                [
+                    {"role": "user", "content": "dirty current user"},
+                    {
+                        "role": "assistant",
+                        "tool_calls": [
+                            {
+                                "id": "call_1",
+                                "type": "function",
+                                "function": {"name": "vision", "arguments": "{}"},
+                            }
+                        ],
+                    },
+                    {
+                        "role": "tool",
+                        "name": "vision",
+                        "tool_call_id": "call_1",
+                        "content": [
+                            {"type": "text", "text": "visible summary"},
+                            {"type": "image_url", "image_url": {"url": raw_image}},
+                            {"payload": "x" * 2000},
+                        ],
+                    },
+                    {"role": "assistant", "content": "done"},
+                ],
+            )
+            self.assertTrue(sync.flush(timeout=1))
+        finally:
+            sync.shutdown()
+
+        _session_id, batch = client.add_messages_calls[0]
+        tool_output = batch[1]["parts"][0]["tool_output"]
+        self.assertIn("visible summary", tool_output)
+        self.assertIn("[image attachment]", tool_output)
+        self.assertIn("[non-text content omitted]", tool_output)
+        self.assertNotIn(raw_image, tool_output)
+
+    def test_session_sync_handles_malformed_and_unmatched_tool_messages(self) -> None:
+        plugin = load_provider_package()
+        config = plugin.ProviderConfig(endpoint="http://openviking.test", user_space="workspace")
+        client = FakeClient(config)
+        sync = plugin.SessionSyncManager(client, config)
+
+        try:
+            sync.enqueue_messages(
+                config.openviking_session_id("startup"),
+                "clean user",
+                "",
+                [
+                    {"role": "user", "content": "dirty current user"},
+                    {
+                        "role": "assistant",
+                        "tool_calls": [
+                            {
+                                "id": "call_bad",
+                                "type": "function",
+                                "function": {"name": "broken_tool", "arguments": "{not json"},
+                            }
+                        ],
+                    },
+                    {"role": "tool", "name": "orphan_tool", "content": "orphan output"},
+                ],
+            )
+            self.assertTrue(sync.flush(timeout=1))
+        finally:
+            sync.shutdown()
+
+        _session_id, batch = client.add_messages_calls[0]
+        self.assertEqual(len(batch), 3)
+        malformed_tool_part = batch[1]["parts"][0]
+        self.assertEqual(malformed_tool_part["tool_id"], "call_bad")
+        self.assertEqual(malformed_tool_part["tool_name"], "broken_tool")
+        self.assertEqual(malformed_tool_part["tool_input"], {"raw_arguments": "{not json"})
+        self.assertEqual(malformed_tool_part["tool_status"], "pending")
+        unmatched_tool_part = batch[2]["parts"][0]
+        self.assertEqual(unmatched_tool_part["tool_id"], "unmatched_1")
+        self.assertEqual(unmatched_tool_part["tool_name"], "orphan_tool")
+        self.assertEqual(unmatched_tool_part["tool_output"], "orphan output")
+        self.assertEqual(unmatched_tool_part["tool_status"], "completed")
+
+    def test_delegate_task_is_captured_as_parent_tool_part(self) -> None:
+        plugin = load_provider_package()
+        config = plugin.ProviderConfig(endpoint="http://openviking.test", user_space="workspace")
+        client = FakeClient(config)
+        sync = plugin.SessionSyncManager(client, config)
+
+        try:
+            sync.enqueue_messages(
+                config.openviking_session_id("startup"),
+                "research the release",
+                "The delegated research found the release notes.",
+                [
+                    {"role": "user", "content": "dirty current user"},
+                    {
+                        "role": "assistant",
+                        "tool_calls": [
+                            {
+                                "id": "delegate_1",
+                                "type": "function",
+                                "function": {
+                                    "name": "delegate_task",
+                                    "arguments": "{\"goal\":\"research the release\"}",
+                                },
+                            }
+                        ],
+                    },
+                    {
+                        "role": "tool",
+                        "name": "delegate_task",
+                        "tool_call_id": "delegate_1",
+                        "content": "Found Hermes memory-provider changes.",
+                    },
+                    {"role": "assistant", "content": "The delegated research found the release notes."},
+                ],
+            )
+            self.assertTrue(sync.flush(timeout=1))
+        finally:
+            sync.shutdown()
+
+        _session_id, batch = client.add_messages_calls[0]
+        tool_part = batch[1]["parts"][0]
+        self.assertEqual(tool_part["tool_name"], "delegate_task")
+        self.assertEqual(tool_part["tool_input"], {"goal": "research the release"})
+        self.assertEqual(tool_part["tool_output"], "Found Hermes memory-provider changes.")
 
     def test_search_uses_all_context_target_and_ignores_stale_scope_arg(self) -> None:
         plugin = load_provider_package()
@@ -236,6 +534,21 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
         self.assertEqual(httpx.posts[0]["headers"]["X-OpenViking-Account"], "acct")
         self.assertNotIn("X-" + "API-Key", httpx.posts[0]["headers"])
         self.assertNotIn("Authorization", httpx.posts[0]["headers"])
+
+    def test_client_add_messages_posts_to_batch_endpoint(self) -> None:
+        plugin = load_provider_package()
+        httpx = RecordingHttpx()
+        plugin.client.get_httpx = lambda: httpx
+        config = plugin.ProviderConfig(endpoint="http://openviking.test/")
+        client = plugin.OpenVikingClient(config)
+        messages = [{"role": "user", "parts": [{"type": "text", "text": "hello"}]}]
+
+        response = client.add_messages("session-1", messages)
+
+        self.assertEqual(response, {"result": {"ok": True}})
+        self.assertEqual(len(httpx.posts), 1)
+        self.assertEqual(httpx.posts[0]["url"], "http://openviking.test/api/v1/sessions/session-1/messages/batch")
+        self.assertEqual(httpx.posts[0]["json"], {"messages": messages})
 
     def test_client_list_and_grep_call_openviking_rest_endpoints(self) -> None:
         plugin = load_provider_package()
@@ -560,13 +873,19 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
 class FakeSync:
     def __init__(self) -> None:
         self.ensured_sessions: list[str] = []
-        self.enqueued_turns: list[tuple[str, str, str]] = []
+        self.enqueued_messages: list[tuple[str, str, str, list[dict[str, Any]]]] = []
 
     def ensure_session(self, session_id: str) -> None:
         self.ensured_sessions.append(session_id)
 
-    def enqueue_turn(self, session_id: str, user_content: str, assistant_content: str) -> None:
-        self.enqueued_turns.append((session_id, user_content, assistant_content))
+    def enqueue_messages(
+        self,
+        session_id: str,
+        user_content: str,
+        assistant_content: str,
+        messages: list[dict[str, Any]],
+    ) -> None:
+        self.enqueued_messages.append((session_id, user_content, assistant_content, messages))
 
     def capture(self, *_args: Any, **_kwargs: Any) -> dict[str, Any]:
         raise AssertionError("test should use the real SessionSyncManager for capture")
@@ -584,6 +903,7 @@ class FakeClient:
         self.add_resource_payloads: list[dict[str, Any]] = []
         self.ensure_session_calls: list[str] = []
         self.add_message_calls: list[dict[str, Any]] = []
+        self.add_messages_calls: list[tuple[str, list[dict[str, Any]]]] = []
         self.commit_session_calls: list[tuple[str, int]] = []
         self.poll_task_calls: list[dict[str, Any]] = []
         self.content_write_calls: list[Any] = []
@@ -714,6 +1034,10 @@ class FakeClient:
                 "role_id": role_id,
             }
         )
+        return {"result": {"ok": True}}
+
+    def add_messages(self, session_id: str, messages: list[dict[str, Any]]) -> dict[str, Any]:
+        self.add_messages_calls.append((session_id, messages))
         return {"result": {"ok": True}}
 
     def commit_session(self, session_id: str, *, keep_recent_count: int = 0, telemetry: bool = False) -> dict[str, Any]:

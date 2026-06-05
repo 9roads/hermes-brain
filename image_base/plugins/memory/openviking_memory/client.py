@@ -136,6 +136,9 @@ class OpenVikingClient:
             payload["role_id"] = role_id
         return self.post(f"/api/v1/sessions/{session_id}/messages", payload)
 
+    def add_messages(self, session_id: str, messages: list[dict[str, Any]]) -> dict[str, Any]:
+        return self.post(f"/api/v1/sessions/{session_id}/messages/batch", {"messages": messages})
+
     def commit_session(
         self,
         session_id: str,

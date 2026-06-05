@@ -26,7 +26,7 @@ docker run --rm -it \
   phoenix-hermes-openviking:local gateway run -v
 ```
 
-The image installs OpenViking `0.3.19`, `httpx` `0.28.1`, `slack_sdk`
+The image installs OpenViking `0.3.23`, `httpx` `0.28.1`, `slack_sdk`
 `3.42.0`, `tiktoken` `0.13.0`, `parallel-web-tools[cli]` `0.5.0`,
 `@onkernel/cli` `0.19.3`, `loisa-composio-cli` `0.1.3`, `nori-slack-cli`
 `0.1.1`, Codex CLI `0.134.0`, Bun `1.3.14`, and the `hermes-lcm` plugin from

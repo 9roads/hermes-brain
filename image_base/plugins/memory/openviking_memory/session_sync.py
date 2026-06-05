@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 import time
@@ -15,6 +16,18 @@ from .config import ProviderConfig
 from .prompting import build_capture_message, compact_text
 
 logger = logging.getLogger(__name__)
+
+_SYSTEM_USER_PREFIXES = (
+    "[System: Your previous tool call ",
+    "[System: The previous response was cut off ",
+    "[System: Your previous response was truncated ",
+    "[System: Continue now.",
+)
+_MAX_BATCH_MESSAGES = 100
+_UNKNOWN_CONTENT_JSON_LIMIT = 1000
+_IMAGE_PART_TYPES = {"image", "image_url", "input_image"}
+_AUDIO_PART_TYPES = {"audio", "input_audio"}
+_FILE_PART_TYPES = {"file", "input_file"}
 
 
 class SessionSyncManager:
@@ -51,29 +64,345 @@ class SessionSyncManager:
 
         return f"Source metadata:\n- actor: {actor}\n\nMessage:\n{content}"
 
-    def _write_turn(self, session_id: str, user_content: str, assistant_content: str) -> None:
-        self.ensure_session(session_id)
-        self.client.add_message(
-            session_id,
-            "user",
-            content=self._trim_message(self._user_message_content(user_content)),
-            created_at=datetime.now(timezone.utc).isoformat(),
-        )
-        self.client.add_message(
-            session_id,
-            "assistant",
-            content=self._trim_message(assistant_content),
-            created_at=datetime.now(timezone.utc).isoformat(),
-        )
+    def _unknown_content_text(self, content: Any) -> str:
+        try:
+            text = json.dumps(content, ensure_ascii=False)
+        except (TypeError, ValueError):
+            text = str(content)
+        if len(text) > _UNKNOWN_CONTENT_JSON_LIMIT:
+            return "[non-text content omitted]"
+        return text
 
-    def enqueue_turn(self, session_id: str, user_content: str, assistant_content: str) -> None:
-        if not session_id or not user_content or not assistant_content:
+    def _content_part_text(self, part: dict[str, Any]) -> str:
+        part_type = str(part.get("type") or "").lower()
+        if part_type in _IMAGE_PART_TYPES:
+            return "[image attachment]"
+        if part_type in _AUDIO_PART_TYPES:
+            return "[audio attachment]"
+        if part_type in _FILE_PART_TYPES:
+            name = part.get("filename") or part.get("name")
+            return f"[file attachment: {name}]" if name else "[file attachment]"
+
+        for key in ("text", "content"):
+            value = part.get(key)
+            if isinstance(value, str) and value.strip():
+                return value
+            if isinstance(value, list):
+                nested = self._message_text(value).strip()
+                if nested:
+                    return nested
+
+        if part_type == "context":
+            abstract = str(part.get("abstract") or "").strip()
+            uri = str(part.get("uri") or "").strip()
+            if abstract and uri:
+                return f"{abstract} ({uri})"
+            return abstract or uri or "[context]"
+
+        if part_type:
+            return f"[{part_type} content]"
+        return self._unknown_content_text(part)
+
+    def _message_text(self, content: Any) -> str:
+        if content is None:
+            return ""
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts: list[str] = []
+            for item in content:
+                if isinstance(item, dict):
+                    text = self._content_part_text(item).strip()
+                    if text:
+                        parts.append(text)
+                elif item is not None:
+                    parts.append(str(item))
+            return "\n".join(parts)
+        if isinstance(content, dict):
+            return self._content_part_text(content)
+        return str(content)
+
+    def _text_part(self, content: Any) -> dict[str, str] | None:
+        text = self._trim_message(self._message_text(content).strip())
+        if not text:
+            return None
+        return {"type": "text", "text": text}
+
+    def _is_synthetic_user_message(self, message: dict[str, Any]) -> bool:
+        if message.get("_thinking_prefill") or message.get("_empty_recovery_synthetic"):
+            return True
+        text = self._message_text(message.get("content")).strip()
+        return any(text.startswith(prefix) for prefix in _SYSTEM_USER_PREFIXES)
+
+    def _current_turn_messages(self, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        start_index = -1
+        for index in range(len(messages) - 1, -1, -1):
+            message = messages[index]
+            if not isinstance(message, dict):
+                continue
+            if message.get("role") == "user" and not self._is_synthetic_user_message(message):
+                start_index = index
+                break
+        if start_index < 0:
+            return []
+        return [message for message in messages[start_index:] if isinstance(message, dict)]
+
+    def _decode_tool_input(self, value: Any) -> Any:
+        if value is None:
+            return {}
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, (list, int, float, bool)):
+            return {"arguments": value}
+        raw = str(value)
+        if not raw.strip():
+            return {}
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return {"raw_arguments": compact_text(raw, 4000)}
+        if isinstance(parsed, dict):
+            return parsed
+        return {"arguments": parsed}
+
+    def _tool_call_fields(self, tool_call: Any) -> tuple[str, str, Any]:
+        if isinstance(tool_call, dict):
+            function = tool_call.get("function")
+            if not isinstance(function, dict):
+                function = {}
+            tool_id = str(
+                tool_call.get("id")
+                or tool_call.get("tool_call_id")
+                or tool_call.get("call_id")
+                or ""
+            )
+            tool_name = str(
+                function.get("name")
+                or tool_call.get("name")
+                or tool_call.get("tool_name")
+                or "unknown"
+            )
+            tool_input = (
+                function.get("arguments")
+                if "arguments" in function
+                else tool_call.get("arguments", tool_call.get("input", tool_call.get("tool_input")))
+            )
+            return tool_id, tool_name, self._decode_tool_input(tool_input)
+
+        function = getattr(tool_call, "function", None)
+        tool_id = str(
+            getattr(tool_call, "id", None)
+            or getattr(tool_call, "tool_call_id", None)
+            or getattr(tool_call, "call_id", None)
+            or ""
+        )
+        tool_name = str(
+            getattr(function, "name", None)
+            or getattr(tool_call, "name", None)
+            or getattr(tool_call, "tool_name", None)
+            or "unknown"
+        )
+        tool_input = (
+            getattr(function, "arguments", None)
+            if function is not None
+            else getattr(tool_call, "arguments", None)
+        )
+        return tool_id, tool_name, self._decode_tool_input(tool_input)
+
+    def _tool_results_by_id(
+        self,
+        messages: list[dict[str, Any]],
+    ) -> tuple[dict[str, list[dict[str, str]]], list[dict[str, str]]]:
+        matched: dict[str, list[dict[str, str]]] = {}
+        unmatched: list[dict[str, str]] = []
+        for message in messages:
+            if message.get("role") != "tool":
+                continue
+            tool_id = str(
+                message.get("tool_call_id")
+                or message.get("call_id")
+                or message.get("tool_use_id")
+                or message.get("id")
+                or ""
+            )
+            entry = {
+                "name": str(message.get("name") or message.get("tool_name") or "unknown"),
+                "content": self._trim_message(self._message_text(message.get("content"))),
+            }
+            if tool_id:
+                matched.setdefault(tool_id, []).append(entry)
+            else:
+                unmatched.append(entry)
+        return matched, unmatched
+
+    def _tool_part(
+        self,
+        *,
+        tool_id: str,
+        tool_name: str,
+        tool_input: Any,
+        tool_output: str,
+        tool_status: str = "",
+    ) -> dict[str, Any]:
+        status = tool_status
+        if not status:
+            if tool_output.lstrip().lower().startswith("error"):
+                status = "error"
+            else:
+                status = "completed" if tool_output else "pending"
+        return {
+            "type": "tool",
+            "tool_id": tool_id or "unknown",
+            "tool_name": tool_name or "unknown",
+            "tool_input": tool_input,
+            "tool_output": self._trim_message(tool_output),
+            "tool_status": status,
+        }
+
+    def _assistant_parts(
+        self,
+        message: dict[str, Any],
+        tool_results: dict[str, list[dict[str, str]]],
+        consumed_tool_ids: set[str],
+    ) -> list[dict[str, Any]]:
+        parts: list[dict[str, Any]] = []
+        text_part = self._text_part(message.get("content"))
+        if text_part:
+            parts.append(text_part)
+
+        tool_calls = message.get("tool_calls") or []
+        if not isinstance(tool_calls, list):
+            tool_calls = [tool_calls]
+        for index, tool_call in enumerate(tool_calls):
+            tool_id, tool_name, tool_input = self._tool_call_fields(tool_call)
+            if not tool_id:
+                tool_id = f"unknown_{index + 1}"
+            results = tool_results.get(tool_id, [])
+            if results:
+                consumed_tool_ids.add(tool_id)
+            output = "\n\n".join(result["content"] for result in results if result.get("content"))
+            if results and (not tool_name or tool_name == "unknown"):
+                tool_name = results[0].get("name") or "unknown"
+            parts.append(
+                self._tool_part(
+                    tool_id=tool_id,
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                    tool_output=output,
+                )
+            )
+        return parts
+
+    def _openviking_messages_for_turn(
+        self,
+        user_content: str,
+        assistant_content: str,
+        messages: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        turn_messages = self._current_turn_messages(messages)
+        if not turn_messages:
+            return []
+
+        created_at = datetime.now(timezone.utc).isoformat()
+        tool_results, unmatched_tool_results = self._tool_results_by_id(turn_messages)
+        consumed_tool_ids: set[str] = set()
+        converted: list[dict[str, Any]] = []
+        first_user = True
+
+        for message in turn_messages:
+            role = message.get("role")
+            if role == "tool":
+                continue
+            if role == "user":
+                if self._is_synthetic_user_message(message):
+                    continue
+                content = self._user_message_content(user_content) if first_user else self._message_text(message.get("content"))
+                first_user = False
+                text_part = self._text_part(content)
+                if text_part:
+                    converted.append({"role": "user", "parts": [text_part], "created_at": created_at})
+                continue
+            if role != "assistant":
+                continue
+
+            parts = self._assistant_parts(message, tool_results, consumed_tool_ids)
+            if parts:
+                converted.append({"role": "assistant", "parts": parts, "created_at": created_at})
+
+        for tool_id, results in tool_results.items():
+            if tool_id in consumed_tool_ids:
+                continue
+            for index, result in enumerate(results):
+                converted.append(
+                    {
+                        "role": "assistant",
+                        "parts": [
+                            self._tool_part(
+                                tool_id=tool_id or f"unmatched_{index + 1}",
+                                tool_name=result.get("name") or "unknown",
+                                tool_input={},
+                                tool_output=result.get("content") or "",
+                            )
+                        ],
+                        "created_at": created_at,
+                    }
+                )
+
+        for index, result in enumerate(unmatched_tool_results):
+            converted.append(
+                {
+                    "role": "assistant",
+                    "parts": [
+                        self._tool_part(
+                            tool_id=f"unmatched_{index + 1}",
+                            tool_name=result.get("name") or "unknown",
+                            tool_input={},
+                            tool_output=result.get("content") or "",
+                        )
+                    ],
+                    "created_at": created_at,
+                }
+            )
+
+        text_part = self._text_part(assistant_content)
+        if not text_part:
+            return converted
+        assistant_text = text_part["text"]
+        for message in converted:
+            if message.get("role") != "assistant":
+                continue
+            for part in message.get("parts") or []:
+                if isinstance(part, dict) and part.get("type") == "text" and part.get("text") == assistant_text:
+                    return converted
+        converted.append({"role": "assistant", "parts": [text_part], "created_at": created_at})
+        return converted
+
+    def _write_messages(
+        self,
+        session_id: str,
+        messages: list[dict[str, Any]],
+    ) -> None:
+        self.ensure_session(session_id)
+        for index in range(0, len(messages), _MAX_BATCH_MESSAGES):
+            self.client.add_messages(session_id, messages[index : index + _MAX_BATCH_MESSAGES])
+
+    def enqueue_messages(
+        self,
+        session_id: str,
+        user_content: str,
+        assistant_content: str,
+        messages: list[dict[str, Any]],
+    ) -> None:
+        if not session_id or not messages:
+            return
+        converted = self._openviking_messages_for_turn(user_content, assistant_content, messages)
+        if not converted:
             return
         with self._lock:
             if self._closed:
                 return
             self._turn_counts[session_id] = self._turn_counts.get(session_id, 0) + 1
-            future = self._executor.submit(self._write_turn, session_id, user_content, assistant_content)
+            future = self._executor.submit(self._write_messages, session_id, converted)
             self._futures.append(future)
 
     def flush(self, timeout: float | None = None) -> bool:
