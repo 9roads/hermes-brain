@@ -35,7 +35,7 @@ to `SLACK_BOT_TOKEN` when needed, seeds Parallel CLI auth from
 store for Codex-created app projects, and verifies required CLIs and
 profile-owned core skills are available.
 
-Phoenix runs Hermes in trusted Daytona sandboxes, so `config.yaml` sets `approvals.mode: off`. Hermes docs define this as skipping terminal approval checks, equivalent to `HERMES_YOLO_MODE=true`; switch it back to `smart` or `manual` for non-sandboxed or user-owned hosts.
+Phoenix runs Hermes in trusted Nomad jobs, so `config.yaml` sets `approvals.mode: off`. Hermes docs define this as skipping terminal approval checks, equivalent to `HERMES_YOLO_MODE=true`; switch it back to `smart` or `manual` for non-sandboxed or user-owned hosts.
 
 Reference docs:
 
@@ -52,6 +52,6 @@ Rollout flow:
 1. Edit this distribution.
 2. Bump `distribution.yaml` version.
 3. Push/pull through the subrepo workflow for `9roads/hermes-brain`.
-4. Run `node ace hermes:daytona:rollout restart` from `backend/` to update installed profiles, or `node ace hermes:daytona:rollout full` to recreate workspace sandboxes from the configured image.
+4. Run `node ace hermes:nomad:rollout restart` from `backend/` to update installed profiles, or `node ace hermes:nomad:rollout full` to recreate workspace jobs from the configured image.
 
-Phoenix injects workspace secrets and dynamic values through the Daytona command environment at runtime. The installed profile `.env` remains user-owned and should not be written by the backend.
+Phoenix injects workspace secrets and dynamic values through the Nomad task environment at runtime. The installed profile `.env` remains user-owned and should not be written by the backend.
