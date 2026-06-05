@@ -83,7 +83,14 @@ if not openviking_ok:
     print(f"openviking unhealthy at {openviking_endpoint}: {last_error}", file=sys.stderr)
     sys.exit(1)
 
-# 4. Phoenix connected-tool runtime
+# 4. LinkdAPI SDK availability
+try:
+    import linkdapi  # noqa: F401
+except Exception as e:
+    print(f"linkdapi SDK import failed: {e}", file=sys.stderr)
+    sys.exit(1)
+
+# 5. Phoenix connected-tool runtime
 for name in (
     "COMPOSIO_API_KEY",
     "KERNEL_API_KEY",

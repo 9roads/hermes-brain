@@ -316,6 +316,56 @@ run_profile_hermes() {
   HERMES_HOME="$profile_dir" HOME="$profile_home_dir" "$@"
 }
 
+remove_legacy_distribution_skill_shadows() {
+  run_profile_hermes python - <<'PY'
+import filecmp
+import os
+import shutil
+from pathlib import Path
+
+profile_dir = Path(os.environ["HERMES_HOME"])
+local_skills = profile_dir / "skills"
+distribution_skills = profile_dir / "distribution-skills"
+
+if not local_skills.is_dir() or not distribution_skills.is_dir():
+    raise SystemExit(0)
+
+
+def relative_files(root: Path) -> set[Path]:
+    return {
+        path.relative_to(root)
+        for path in root.rglob("*")
+        if path.is_file() and not path.is_symlink()
+    }
+
+
+def directories_match(left: Path, right: Path) -> bool:
+    left_files = relative_files(left)
+    right_files = relative_files(right)
+    if left_files != right_files:
+        return False
+    return all(filecmp.cmp(left / rel, right / rel, shallow=False) for rel in left_files)
+
+
+removed = []
+kept = []
+for dist_skill in sorted(path for path in distribution_skills.iterdir() if path.is_dir()):
+    local_skill = local_skills / dist_skill.name
+    if not local_skill.is_dir():
+        continue
+    if directories_match(local_skill, dist_skill):
+        shutil.rmtree(local_skill)
+        removed.append(dist_skill.name)
+    else:
+        kept.append(dist_skill.name)
+
+if removed:
+    print("[phoenix] Removed legacy default skill shadows: " + ", ".join(removed))
+if kept:
+    print("[phoenix] Kept modified local skill overrides: " + ", ".join(kept))
+PY
+}
+
 ensure_phoenix_profile() {
   echo "[phoenix] Preparing Hermes profile $profile_name in $profile_dir"
 
@@ -338,7 +388,7 @@ ensure_phoenix_profile() {
 }
 
 ensure_nori_slack_skill() {
-  local skill_path="$profile_dir/skills/nori-slack-cli/SKILL.md"
+  local skill_path="$profile_dir/distribution-skills/nori-slack-cli/SKILL.md"
 
   if [ -f "$skill_path" ]; then
     return 0
@@ -349,7 +399,7 @@ ensure_nori_slack_skill() {
 }
 
 ensure_loisa_viking_skill() {
-  local skill_path="$profile_dir/skills/loisa-viking-cli/SKILL.md"
+  local skill_path="$profile_dir/distribution-skills/loisa-viking-cli/SKILL.md"
 
   if [ -f "$skill_path" ]; then
     return 0
@@ -389,6 +439,7 @@ configure_bun
 ensure_codex_cli
 configure_codex_cli
 ensure_phoenix_profile
+remove_legacy_distribution_skill_shadows
 configure_parallel_cli
 ensure_nori_slack_skill
 ensure_loisa_viking_skill

@@ -15,6 +15,7 @@ ARG OPENVIKING_VERSION=0.3.23
 ARG HTTPX_VERSION=0.28.1
 ARG SLACK_SDK_VERSION=3.42.0
 ARG TIKTOKEN_VERSION=0.13.0
+ARG LINKDAPI_VERSION=1.0.9
 ARG PARALLEL_WEB_TOOLS_VERSION=0.5.0
 ARG COMPOSIO_CLI_VERSION=0.1.3
 ARG NORI_SLACK_CLI_VERSION=0.1.1
@@ -35,6 +36,7 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
       "httpx==${HTTPX_VERSION}" \
       "slack_sdk==${SLACK_SDK_VERSION}" \
       "tiktoken==${TIKTOKEN_VERSION}" \
+      "linkdapi==${LINKDAPI_VERSION}" \
       "parallel-web-tools[cli]==${PARALLEL_WEB_TOOLS_VERSION}" && \
     test -x /opt/hermes/.venv/bin/python && \
     test -x /opt/hermes/.venv/bin/hermes && \
@@ -53,7 +55,9 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
     export PATH="/opt/hermes/.venv/bin:$PATH" && \
     hash -r && \
     python -c 'import tiktoken' && \
+    python -c 'import linkdapi' && \
     /usr/local/bin/python -c 'import tiktoken' && \
+    /usr/local/bin/python -c 'import linkdapi' && \
     python --version && \
     hermes --help >/dev/null && \
     /usr/local/bin/hermes --help >/dev/null && \

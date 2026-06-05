@@ -23,11 +23,13 @@ docker run --rm -it \
   -e OPENAI_BASE_URL="$OPENAI_BASE_URL" \
   -e OPENAI_API_KEY="$OPENAI_API_KEY" \
   -e KERNEL_API_KEY="$KERNEL_API_KEY" \
+  -e LINKD_API_KEY="$LINKD_API_KEY" \
   phoenix-hermes-openviking:local gateway run -v
 ```
 
 The image installs OpenViking `0.3.23`, `httpx` `0.28.1`, `slack_sdk`
-`3.42.0`, `tiktoken` `0.13.0`, `parallel-web-tools[cli]` `0.5.0`,
+`3.42.0`, `tiktoken` `0.13.0`, `linkdapi` `1.0.9`,
+`parallel-web-tools[cli]` `0.5.0`,
 `@onkernel/cli` `0.19.3`, `loisa-composio-cli` `0.1.3`, `nori-slack-cli`
 `0.1.1`, Codex CLI `0.134.0`, Bun `1.3.14`, and the `hermes-lcm` plugin from
 `https://github.com/stephenschoettler/hermes-lcm.git`. The plugin is installed
@@ -45,13 +47,14 @@ are initialized with `bun init --react=shadcn --yes` and
 
 On gateway startup, the wrapper installs or updates the Phoenix Hermes profile,
 verifies required CLIs including `parallel-cli` and `kernel`, verifies
-the profile-owned `nori-slack-cli` and `loisa-viking-cli` skills exist,
+the profile-owned `distribution-skills/nori-slack-cli` and
+`distribution-skills/loisa-viking-cli` skills exist,
 initializes Codex CLI API-key auth from `OPENAI_API_KEY`, seeds Parallel CLI
 auth under the profile home from `PARALLEL_API_KEY`, names the default Kanban
 board `General Tasks` when it still has Hermes' default display name, starts
 OpenViking from `/opt/data/openviking`, and then runs the requested Hermes
-command. Phoenix passes only `KERNEL_API_KEY` for Kernel CLI auth and remote
-browser automation at runtime.
+command. Phoenix passes `KERNEL_API_KEY` for Kernel CLI auth and remote browser
+automation plus `LINKD_API_KEY` for LinkdAPI scripts at runtime.
 
 Codex CLI auth is runtime state, not a baked image secret. The wrapper stores
 Codex config and API-key login cache under `/opt/data/codex` by default. When
@@ -68,7 +71,7 @@ the built-in personal `profile` category is disabled and a `company` category
 stores the shared company profile at `viking://user/<space>/memories/company.md`.
 All other memory behavior uses OpenViking's native categories. The provider does
 not expose model tools; interactive memory/resource work uses the profile-owned
-`loisa-viking-cli` skill and the `ov` or `openviking` CLI.
+`distribution-skills/loisa-viking-cli` skill and the `ov` or `openviking` CLI.
 
 The wrapper preserves upstream s6 stage2 setup. Phoenix setup and OpenViking
 startup happen after s6 has bootstrapped `/opt/data`; the Phoenix main wrapper

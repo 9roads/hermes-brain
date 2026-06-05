@@ -324,7 +324,9 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIsNone(repeated)
 
     def test_composio_cli_skill_examples_always_include_session_id(self) -> None:
-        content = (HERMES_ROOT / "skills" / "composio-cli" / "SKILL.md").read_text(
+        content = (
+            HERMES_ROOT / "distribution-skills" / "composio-cli" / "SKILL.md"
+        ).read_text(
             encoding="utf-8"
         )
         command_blocks = re.findall(r"```bash\n(.*?)```", content, flags=re.S)
@@ -340,6 +342,23 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         for block in command_blocks:
             if any(command in block for command in ("composio search", "composio execute", "composio proxy")):
                 self.assertIn("--session-id", block)
+
+    def test_linkdapi_python_sdk_skill_documents_runtime_usage(self) -> None:
+        skill_dir = HERMES_ROOT / "distribution-skills" / "linkdapi-python-sdk"
+        content = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+        reference = (skill_dir / "references" / "sdk-guide.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("LINKD_API_KEY", content)
+        self.assertIn("required_environment_variables", content)
+        self.assertIn("required_for: LinkdAPI professional profile", content)
+        self.assertIn("from linkdapi import LinkdAPI", content)
+        self.assertIn("AsyncLinkdAPI", content)
+        self.assertIn("professional-network data", content)
+        self.assertIn("https://linkdapi.com/docs/intro", reference)
+        self.assertIn("https://github.com/linkdAPI/linkdapi-SDK#readme", reference)
+        self.assertIn("https://pypi.org/project/linkdapi/", reference)
 
     def test_profile_removes_static_mcp_and_documents_runtime_requirements(self) -> None:
         config = (HERMES_ROOT / "config.yaml").read_text(encoding="utf-8")
@@ -366,6 +385,7 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertNotIn("- SLACK_APP_TOKEN", config)
         self.assertNotIn("- SLACK_SOCKET_API_BASE", config)
         self.assertNotIn("- SLACK_API_BASE", config)
+        self.assertNotIn("- LINKD_API_KEY", config)
         self.assertNotIn("composio", mcp.get("mcpServers", {}))
         self.assertIn("COMPOSIO_API_KEY", plugin_yaml)
         self.assertIn('shutil.which("composio")', healthcheck)
@@ -375,12 +395,15 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("COMPOSIO_API_KEY", healthcheck)
         self.assertIn("KERNEL_API_KEY", healthcheck)
         self.assertIn("PARALLEL_API_KEY", healthcheck)
+        self.assertIn("import linkdapi", healthcheck)
         self.assertNotIn("AGENT" + "_BROWSER_PROVIDER", healthcheck)
         self.assertIn("PHOENIX_BACKEND_URL", healthcheck)
         self.assertIn("PHOENIX_HERMES_PLUGIN_TOKEN", healthcheck)
         self.assertNotIn("BROWSERBASE_API_KEY", healthcheck)
         self.assertNotIn("BROWSERBASE_PROJECT_ID", healthcheck)
         self.assertIn("parallel-web-tools[cli]==${PARALLEL_WEB_TOOLS_VERSION}", dockerfile)
+        self.assertIn("linkdapi==${LINKDAPI_VERSION}", dockerfile)
+        self.assertIn("python -c 'import linkdapi'", dockerfile)
         self.assertIn("parallel-cli --version", dockerfile)
         self.assertIn("configure_parallel_cli", runner)
         self.assertIn(".config/parallel-web-tools", runner)
@@ -394,11 +417,14 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertNotIn("AGENT" + "_BROWSER_PROVIDER", dockerfile)
         self.assertIn("PARALLEL_API_KEY", readme)
         self.assertIn("KERNEL_API_KEY", readme)
+        self.assertIn("LINKD_API_KEY", readme)
         self.assertIn("parallel-cli", readme)
         self.assertIn("kernel-cli", readme)
+        self.assertIn("linkdapi-python-sdk", readme)
         self.assertIn("`kernel`", readme)
         self.assertIn("PARALLEL_API_KEY=", env_example)
         self.assertIn("KERNEL_API_KEY=", env_example)
+        self.assertIn("LINKD_API_KEY=", env_example)
         self.assertNotIn("BROWSERBASE_API_KEY=", env_example)
         self.assertNotIn("BROWSERBASE_PROJECT_ID=", env_example)
         self.assertIn("nori-slack-cli", soul)
@@ -406,10 +432,11 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("## External tools", soul)
         self.assertIn("Parallel CLI skills", soul)
         self.assertIn("kernel-cli", soul)
+        self.assertIn("linkdapi-python-sdk", soul)
         self.assertNotIn("Composio Slackbot tools are allowed", soul)
 
     def test_parallel_profile_skills_are_limited_and_skip_onboarding(self) -> None:
-        skills_dir = HERMES_ROOT / "skills"
+        skills_dir = HERMES_ROOT / "distribution-skills"
         expected = {
             "parallel-web-search",
             "parallel-web-extract",

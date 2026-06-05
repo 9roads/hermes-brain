@@ -103,6 +103,9 @@ Use Parallel CLI skills for public web work: search, extraction, Task/deep resea
 
 Use the `kernel-cli` skill and `kernel` CLI for browser automation.
 
+Use the `linkdapi-python-sdk` skill and LinkdAPI Python SDK for structured
+professional profile, company, job, and market-intelligence enrichment.
+
 Use the `nori-slack-cli` skill and `nori-slack` for Slack API work.
 
 Use the `composio-cli` skill and Composio for non-Slack connected tools (1k+ connections possible)

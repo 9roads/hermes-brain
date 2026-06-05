@@ -115,7 +115,7 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
         self.assertEqual(provider.get_tool_schemas(), [])
 
     def test_loisa_viking_cli_skill_is_profile_owned(self) -> None:
-        skill_path = HERMES_ROOT / "skills" / "loisa-viking-cli" / "SKILL.md"
+        skill_path = HERMES_ROOT / "distribution-skills" / "loisa-viking-cli" / "SKILL.md"
 
         content = skill_path.read_text(encoding="utf-8")
 

@@ -2,9 +2,9 @@
 
 This directory is the Phoenix-owned Hermes profile distribution source. It is intended to be mirrored with the `https://github.com/9roads/hermes-brain` git subrepo workflow.
 
-Edit static agent behavior here: `SOUL.md`, `config.yaml`, `skills/`, `plugins/`, `cron/`, and `scripts/`. Runtime state does not belong here.
+Edit static agent behavior here: `SOUL.md`, `config.yaml`, `distribution-skills/`, `plugins/`, `cron/`, and `scripts/`. Runtime state does not belong here.
 
-Hermes reads MCP servers from `config.yaml` under `mcp_servers`; Phoenix should not add MCP servers to an installed sandbox at runtime. This profile intentionally does not configure a static Composio MCP server. Composio access is bootstrapped per Hermes session by `plugins/phoenix-composio-session` and used through the `composio-cli` skill for non-Slack connected tools. Slack API access uses the `nori-slack-cli` skill and `nori-slack` CLI with `SLACK_BOT_TOKEN`. Public web work uses the profile-owned Parallel CLI skills and an authenticated `parallel-cli`, including search, extraction, Task/deep research, FindAll, Monitor, and data enrichment. Browser automation uses the profile-owned `kernel-cli` skill and `kernel` CLI with Kernel. The built-in Hermes `web` and `browser` toolsets are globally disabled.
+Hermes reads MCP servers from `config.yaml` under `mcp_servers`; Phoenix should not add MCP servers to an installed sandbox at runtime. This profile intentionally does not configure a static Composio MCP server. Composio access is bootstrapped per Hermes session by `plugins/phoenix-composio-session` and used through the `composio-cli` skill for non-Slack connected tools. Slack API access uses the `nori-slack-cli` skill and `nori-slack` CLI with `SLACK_BOT_TOKEN`. Public web work uses the profile-owned Parallel CLI skills and an authenticated `parallel-cli`, including search, extraction, Task/deep research, FindAll, Monitor, and data enrichment. Browser automation uses the profile-owned `kernel-cli` skill and `kernel` CLI with Kernel. Professional profile, company, and job data enrichment uses the `linkdapi-python-sdk` skill with the preinstalled LinkdAPI Python SDK and `LINKD_API_KEY`; the skill declares `required_environment_variables` so Hermes forwards the key to terminal sandboxes when the skill is loaded. These Phoenix-owned skills live in `distribution-skills/`, which `config.yaml` loads through `skills.external_dirs`, leaving the default `skills/` directory for user-created skills. The built-in Hermes `web` and `browser` toolsets are globally disabled.
 
 Required Phoenix runtime env for connected tools:
 
@@ -12,6 +12,7 @@ Required Phoenix runtime env for connected tools:
 - `PHOENIX_WORKSPACE_ID`
 - `PHOENIX_HERMES_PLUGIN_TOKEN`
 - `COMPOSIO_API_KEY`
+- `LINKD_API_KEY`
 - `KERNEL_API_KEY`
 - `PARALLEL_API_KEY`
 - `SLACK_BOT_TOKEN`
@@ -25,13 +26,14 @@ not terminal passthrough values. Terminal tools should only receive
 directly to Slack with that real bot token.
 
 The Phoenix Hermes image installs pinned `parallel-web-tools[cli]`,
-`@onkernel/cli`, `loisa-composio-cli`, `nori-slack-cli`, and Bun at build time,
-exposing `parallel-cli`, `kernel`, `composio`, `nori-slack`, `bun`, and `bunx`
-on `PATH`. Phoenix passes `KERNEL_API_KEY` at runtime for Kernel CLI auth, maps
-legacy `SLACK_TOKEN` to `SLACK_BOT_TOKEN` when needed, seeds Parallel CLI auth
-from `PARALLEL_API_KEY` into the profile home, configures Bun's shared
-cache/global store for Codex-created app projects, and verifies required CLIs
-and profile-owned core skills are available.
+`@onkernel/cli`, `loisa-composio-cli`, `nori-slack-cli`, `linkdapi`, and Bun at
+build time, exposing `parallel-cli`, `kernel`, `composio`, `nori-slack`, `bun`,
+and `bunx` on `PATH`. Phoenix passes `KERNEL_API_KEY` at runtime for Kernel CLI
+auth, passes `LINKD_API_KEY` for LinkdAPI SDK usage, maps legacy `SLACK_TOKEN`
+to `SLACK_BOT_TOKEN` when needed, seeds Parallel CLI auth from
+`PARALLEL_API_KEY` into the profile home, configures Bun's shared cache/global
+store for Codex-created app projects, and verifies required CLIs and
+profile-owned core skills are available.
 
 Phoenix runs Hermes in trusted Daytona sandboxes, so `config.yaml` sets `approvals.mode: off`. Hermes docs define this as skipping terminal approval checks, equivalent to `HERMES_YOLO_MODE=true`; switch it back to `smart` or `manual` for non-sandboxed or user-owned hosts.
 

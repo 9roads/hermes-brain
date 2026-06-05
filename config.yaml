@@ -119,6 +119,8 @@ tool_output:
   max_line_length: 2000
 
 skills:
+  external_dirs:
+    - distribution-skills
   disabled:
     - apple-notes
     - apple-reminders

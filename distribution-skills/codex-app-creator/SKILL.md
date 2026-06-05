@@ -137,7 +137,7 @@ is part of the normal flow, so do not ask for confirmation before running it:
 ```bash
 PROFILE_NAME="${PHOENIX_HERMES_PROFILE_NAME:-phoenix}"
 PROFILE_DIR="${HERMES_HOME:-/opt/data/profiles/$PROFILE_NAME}"
-PUBLISH="$PROFILE_DIR/skills/codex-app-creator/scripts/publish.sh"
+PUBLISH="$PROFILE_DIR/distribution-skills/codex-app-creator/scripts/publish.sh"
 test -x "$PUBLISH"
 
 bash "$PUBLISH" dist --client hermes --spa
