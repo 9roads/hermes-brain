@@ -70,6 +70,7 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
     chown -R hermes:hermes /opt/hermes/.venv
 
 COPY python/phoenix_slack_socket_router.py /tmp/phoenix_slack_socket_router.py
+COPY python/phoenix_dashboard_oidc_patch.py /tmp/phoenix_dashboard_oidc_patch.py
 
 RUN /opt/hermes/.venv/bin/python - <<'PY'
 from pathlib import Path
@@ -88,6 +89,8 @@ shutil.chown(module, user="hermes", group="hermes")
 shutil.chown(pth, user="hermes", group="hermes")
 print(f"Installed Phoenix Slack Socket Mode router patch: {module}")
 PY
+
+RUN /opt/hermes/.venv/bin/python /tmp/phoenix_dashboard_oidc_patch.py
 
 RUN set -eux; \
     ln -sfn ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm; \
