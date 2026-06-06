@@ -19,6 +19,7 @@ Runtime defaults:
 - account: `default`
 - user namespace: `default`
 - internal agent id: `OPENVIKING_AGENT_ID`, then `hermes-memory`
+- API key: `OPENVIKING_API_KEY`, then `OPENVIKING_ROOT_API_KEY`
 
 `OPENVIKING_AGENT` is intentionally ignored. The agent id is provenance, not a
 memory namespace.

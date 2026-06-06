@@ -152,10 +152,68 @@ config["account"] = os.environ["OPENVIKING_ACCOUNT"]
 config["user"] = os.environ["OPENVIKING_USER"]
 config["agent_id"] = os.environ["OPENVIKING_AGENT_ID"]
 
+api_key = os.environ.get("OPENVIKING_API_KEY") or os.environ.get("OPENVIKING_ROOT_API_KEY")
+if api_key:
+    config["api_key"] = api_key
+else:
+    config.pop("api_key", None)
+
 tmp_file.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
 os.replace(tmp_file, config_file)
 PY
   chmod 640 "$cli_config_file" 2>/dev/null || true
+}
+
+configure_openviking_server_runtime() {
+  local config_file="$1"
+  local tmp_file="$config_file.tmp.$$"
+
+  python - "$config_file" "$tmp_file" <<'PY'
+import json
+import os
+from pathlib import Path
+import sys
+
+config_file = Path(sys.argv[1])
+tmp_file = Path(sys.argv[2])
+
+try:
+    config = json.loads(config_file.read_text(encoding="utf-8"))
+except FileNotFoundError:
+    config = {}
+
+if not isinstance(config, dict):
+    config = {}
+
+server = config.get("server")
+if not isinstance(server, dict):
+    server = {}
+
+server["host"] = os.environ["OPENVIKING_HOST"]
+server["port"] = int(os.environ["OPENVIKING_PORT"])
+root_api_key = os.environ.get("OPENVIKING_ROOT_API_KEY", "").strip()
+auth_mode = os.environ.get("OPENVIKING_AUTH_MODE", "").strip()
+
+if root_api_key:
+    server["root_api_key"] = root_api_key
+    server["auth_mode"] = auth_mode or "api_key"
+elif server["host"] not in {"127.0.0.1", "localhost", "::1"}:
+    raise SystemExit(
+        "OPENVIKING_ROOT_API_KEY is required when OPENVIKING_HOST is not localhost"
+    )
+else:
+    server.pop("root_api_key", None)
+    if auth_mode:
+        server["auth_mode"] = auth_mode
+    else:
+        server["auth_mode"] = "dev"
+
+config["server"] = server
+
+tmp_file.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+os.replace(tmp_file, config_file)
+PY
+  chmod 640 "$config_file" 2>/dev/null || true
 }
 
 ensure_composio_cli() {
@@ -353,6 +411,13 @@ run_profile_hermes() {
   HERMES_HOME="$profile_dir" HOME="$profile_home_dir" "$@"
 }
 
+is_local_profile_distribution_repo() {
+  case "$profile_distribution_repo" in
+    http://*|https://*|ssh://*|git://*|git@*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
 remove_legacy_distribution_skill_shadows() {
   run_profile_hermes python - <<'PY'
 import filecmp
@@ -407,12 +472,20 @@ ensure_phoenix_profile() {
   echo "[phoenix] Preparing Hermes profile $profile_name in $profile_dir"
 
   if run_root_hermes hermes profile info "$profile_name" >/dev/null 2>&1; then
-    run_root_hermes hermes profile update "$profile_name" --force-config --yes \
-      || run_root_hermes hermes profile install "$profile_distribution_repo" \
+    if is_local_profile_distribution_repo; then
+      run_root_hermes hermes profile install "$profile_distribution_repo" \
         --name "$profile_name" \
         --alias \
         --yes \
         --force
+    else
+      run_root_hermes hermes profile update "$profile_name" --force-config --yes \
+        || run_root_hermes hermes profile install "$profile_distribution_repo" \
+          --name "$profile_name" \
+          --alias \
+          --yes \
+          --force
+    fi
   else
     run_root_hermes hermes profile install "$profile_distribution_repo" \
       --name "$profile_name" \
@@ -490,7 +563,9 @@ openviking_data_dir="${OPENVIKING_DATA_DIR:-$data_root/openviking}"
 openviking_workspace_dir="${OPENVIKING_WORKSPACE_DIR:-$openviking_data_dir/workspace}"
 openviking_config_file="${OPENVIKING_CONFIG_FILE:-$openviking_data_dir/ov.conf}"
 openviking_cli_config_file="${OPENVIKING_CLI_CONFIG_FILE:-$openviking_data_dir/ovcli.conf}"
-openviking_endpoint="${OPENVIKING_ENDPOINT:-http://127.0.0.1:1933}"
+openviking_host="${OPENVIKING_HOST:-127.0.0.1}"
+openviking_port="${OPENVIKING_PORT:-1933}"
+openviking_endpoint="${OPENVIKING_ENDPOINT:-http://127.0.0.1:$openviking_port}"
 openviking_server_bin="${OPENVIKING_SERVER_BIN:-openviking-server}"
 image_config_dir="/opt/hermes/openviking"
 log_dir="${OPENVIKING_LOG_DIR:-$data_root/logs}"
@@ -511,12 +586,16 @@ fi
 
 export OPENVIKING_CONFIG_FILE="$openviking_config_file"
 export OPENVIKING_CLI_CONFIG_FILE="$openviking_cli_config_file"
+export OPENVIKING_HOST="$openviking_host"
+export OPENVIKING_PORT="$openviking_port"
 export OPENVIKING_ENDPOINT="$openviking_endpoint"
 export OPENVIKING_ACCOUNT="${OPENVIKING_ACCOUNT:-default}"
 export OPENVIKING_USER_SPACE="${OPENVIKING_USER_SPACE:-default}"
 export OPENVIKING_USER="${OPENVIKING_USER:-$OPENVIKING_USER_SPACE}"
 export OPENVIKING_AGENT_ID="${OPENVIKING_AGENT_ID:-hermes-memory}"
+export OPENVIKING_ROOT_API_KEY="${OPENVIKING_ROOT_API_KEY:-}"
 
+configure_openviking_server_runtime "$openviking_config_file"
 configure_openviking_cli_runtime "$openviking_cli_config_file"
 
 if ! command -v "$openviking_server_bin" >/dev/null 2>&1; then
@@ -552,13 +631,19 @@ wait_for_openviking() {
 
     if python - "$openviking_endpoint" <<'PY'
 import json
+import os
 import sys
 import urllib.request
 
 endpoint = sys.argv[1].rstrip("/")
+headers = {}
+api_key = os.environ.get("OPENVIKING_ROOT_API_KEY", "").strip()
+if api_key:
+    headers["X-API-Key"] = api_key
 for path in ("/health", "/ready"):
     try:
-        with urllib.request.urlopen(f"{endpoint}{path}", timeout=2) as response:
+        request = urllib.request.Request(f"{endpoint}{path}", headers=headers)
+        with urllib.request.urlopen(request, timeout=2) as response:
             if response.status >= 400:
                 continue
             data = json.loads(response.read().decode("utf-8"))

@@ -37,6 +37,8 @@ class OpenVikingClient:
             "X-OpenViking-User": self.config.user_space,
             "X-OpenViking-Agent": self.config.agent_id,
         }
+        if self.config.api_key:
+            headers["X-API-Key"] = self.config.api_key
         return headers
 
     def _multipart_headers(self) -> dict[str, str]:

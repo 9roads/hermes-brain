@@ -18,9 +18,11 @@ HERMES_ROOT = PLUGIN_ROOT.parents[3]
 ENV_KEYS = [
     "OPENVIKING_AGENT",
     "OPENVIKING_AGENT_ID",
+    "OPENVIKING_API_KEY",
     "OPENVIKING_ENDPOINT",
     "OPENVIKING_MEMORY_COMMIT_KEEP_RECENT",
     "OPENVIKING_MEMORY_TOOLS",
+    "OPENVIKING_ROOT_API_KEY",
     "OPENVIKING_USER_SPACE",
 ]
 
@@ -88,12 +90,30 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
         self.assertEqual(config.account, "default")
         self.assertEqual(config.user_space, "default")
         self.assertEqual(config.agent_id, "hermes-memory")
+        self.assertEqual(config.api_key, "")
         self.assertEqual(config.memory_root, "viking://user/default/memories")
         self.assertEqual(config.resources_root, "viking://resources")
         self.assertEqual(config.search_target_uri, "viking://")
         self.assertEqual(config.commit_keep_recent_count, 0)
         self.assertIn("list", config.enabled_tools)
         self.assertIn("grep", config.enabled_tools)
+
+    def test_config_uses_openviking_root_api_key_fallback(self) -> None:
+        plugin = load_provider_package()
+        os.environ["OPENVIKING_ROOT_API_KEY"] = "root-key"
+
+        config = plugin.ProviderConfig.from_env()
+
+        self.assertEqual(config.api_key, "root-key")
+
+    def test_config_prefers_openviking_api_key(self) -> None:
+        plugin = load_provider_package()
+        os.environ["OPENVIKING_API_KEY"] = "client-key"
+        os.environ["OPENVIKING_ROOT_API_KEY"] = "root-key"
+
+        config = plugin.ProviderConfig.from_env()
+
+        self.assertEqual(config.api_key, "client-key")
 
     def test_commit_keep_recent_count_can_be_overridden(self) -> None:
         plugin = load_provider_package()
@@ -581,6 +601,24 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
         self.assertEqual(httpx.posts[0]["json"], {"query": "roadmap"})
         self.assertEqual(httpx.posts[0]["headers"]["X-OpenViking-Account"], "acct")
         self.assertNotIn("X-" + "API-Key", httpx.posts[0]["headers"])
+        self.assertNotIn("Authorization", httpx.posts[0]["headers"])
+
+    def test_client_sends_openviking_api_key_when_configured(self) -> None:
+        plugin = load_provider_package()
+        httpx = RecordingHttpx()
+        plugin.client.get_httpx = lambda: httpx
+        config = plugin.ProviderConfig(
+            endpoint="http://openviking.test/",
+            account="acct",
+            user_space="workspace",
+            agent_id="agent",
+            api_key="client-key",
+        )
+        client = plugin.OpenVikingClient(config)
+
+        client.search({"query": "roadmap"})
+
+        self.assertEqual(httpx.posts[0]["headers"]["X-API-Key"], "client-key")
         self.assertNotIn("Authorization", httpx.posts[0]["headers"])
 
     def test_client_add_messages_posts_to_batch_endpoint(self) -> None:

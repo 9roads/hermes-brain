@@ -106,6 +106,7 @@ class ProviderConfig:
     account: str = DEFAULT_ACCOUNT
     user_space: str = DEFAULT_USER_SPACE
     agent_id: str = DEFAULT_AGENT_ID
+    api_key: str = ""
     hermes_home: str = ""
     platform: str = "cli"
     agent_identity: str = ""
@@ -138,6 +139,10 @@ class ProviderConfig:
                 _first_nonempty(os.environ.get("OPENVIKING_USER_SPACE"), DEFAULT_USER_SPACE)
             ),
             agent_id=sanitize_identifier(_first_nonempty(os.environ.get("OPENVIKING_AGENT_ID"), DEFAULT_AGENT_ID)),
+            api_key=_first_nonempty(
+                os.environ.get("OPENVIKING_API_KEY"),
+                os.environ.get("OPENVIKING_ROOT_API_KEY"),
+            ),
             hermes_home=_clean(runtime.get("hermes_home")),
             platform=_first_nonempty(runtime.get("platform"), "cli"),
             agent_identity=_clean(runtime.get("agent_identity")),

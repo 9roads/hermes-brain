@@ -395,6 +395,8 @@ class PhoenixComposioSessionTests(unittest.TestCase):
         self.assertIn("COMPOSIO_API_KEY", healthcheck)
         self.assertIn("KERNEL_API_KEY", healthcheck)
         self.assertIn("PARALLEL_API_KEY", healthcheck)
+        self.assertIn("OPENVIKING_ROOT_API_KEY", healthcheck)
+        self.assertIn('"X-API-Key"', healthcheck)
         self.assertIn("import linkdapi", healthcheck)
         self.assertNotIn("AGENT" + "_BROWSER_PROVIDER", healthcheck)
         self.assertIn("PHOENIX_BACKEND_URL", healthcheck)

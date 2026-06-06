@@ -16,6 +16,9 @@ state_path = os.path.join(home, "gateway_state.json")
 openviking_endpoint = (
     os.environ.get("OPENVIKING_ENDPOINT") or "http://127.0.0.1:1933"
 ).strip().rstrip("/")
+openviking_api_key = (
+    os.environ.get("OPENVIKING_API_KEY") or os.environ.get("OPENVIKING_ROOT_API_KEY") or ""
+).strip()
 openviking_config_file = os.environ.get(
     "OPENVIKING_CONFIG_FILE",
     DEFAULT_OPENVIKING_CONFIG_FILE,
@@ -67,10 +70,17 @@ if not os.path.isfile(openviking_config_file):
 
 openviking_ok = False
 last_error = ""
+openviking_headers = {}
+if openviking_api_key:
+    openviking_headers["X-API-Key"] = openviking_api_key
 
 for health_path in ("/health", "/ready"):
     try:
-        with urllib.request.urlopen(f"{openviking_endpoint}{health_path}", timeout=3) as r:
+        req = urllib.request.Request(
+            f"{openviking_endpoint}{health_path}",
+            headers=openviking_headers,
+        )
+        with urllib.request.urlopen(req, timeout=3) as r:
             data = json.loads(r.read().decode())
         if data.get("status") in {"ok", "ready"} or data.get("healthy") is True:
             openviking_ok = True

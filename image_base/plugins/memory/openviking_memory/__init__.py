@@ -305,6 +305,14 @@ class OpenVikingMemoryProvider(MemoryProvider):
                 "default": "default",
                 "env_var": "OPENVIKING_USER_SPACE",
             },
+            {
+                "key": "OPENVIKING_API_KEY",
+                "description": "Optional OpenViking API key for authenticated local servers.",
+                "secret": True,
+                "required": False,
+                "default": "",
+                "env_var": "OPENVIKING_API_KEY",
+            },
         ]
 
     def _session_id_for(self, hermes_session_id: str = "") -> str:

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG HERMES_BASE_IMAGE=nousresearch/hermes-agent:v2026.5.29.2@sha256:2bba4ab37729ebdd864d4caf277b24fec4cd8bfc2855185fd9f4c90f9bf7bfa3
+ARG HERMES_BASE_IMAGE=nousresearch/hermes-agent:v2026.6.5@sha256:9ad3b04ec916ea2c2da22358fd43b024c788d74073210695af88bfc2e63869b4
 ARG NODE_VERSION=24.16.0
 ARG BUN_VERSION=1.3.14
 ARG PNPM_VERSION=11.3.0
@@ -89,27 +89,6 @@ shutil.chown(pth, user="hermes", group="hermes")
 print(f"Installed Phoenix Slack Socket Mode router patch: {module}")
 PY
 
-RUN /opt/hermes/.venv/bin/python - <<'PY'
-from pathlib import Path
-import py_compile
-
-import openai
-
-sdk_file = Path(openai.__file__).resolve().parent / "lib" / "_parsing" / "_responses.py"
-old = "for output in response.output:"
-new = "for output in (response.output or []):"
-source = sdk_file.read_text(encoding="utf-8")
-
-if new in source:
-    print(f"OpenAI Responses parser already patched: {sdk_file}")
-elif old in source:
-    sdk_file.write_text(source.replace(old, new, 1), encoding="utf-8")
-    py_compile.compile(str(sdk_file), doraise=True)
-    print(f"Patched OpenAI Responses parser for null terminal output: {sdk_file}")
-else:
-    raise SystemExit(f"OpenAI Responses parser patch target not found: {sdk_file}")
-PY
-
 RUN set -eux; \
     ln -sfn ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm; \
     ln -sfn ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx; \
@@ -195,6 +174,8 @@ RUN set -eux; \
     install -d -o hermes -g hermes -m 0750 /opt/data/logs
 
 ENV BUN_INSTALL_GLOBAL_STORE=1
+ENV OPENVIKING_HOST=127.0.0.1
+ENV OPENVIKING_PORT=1933
 ENV OPENVIKING_ENDPOINT=http://127.0.0.1:1933
 ENV OPENVIKING_ACCOUNT=default
 ENV OPENVIKING_USER_SPACE=default
