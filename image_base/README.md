@@ -46,15 +46,18 @@ are initialized with `bun init --react=shadcn --yes` and
 `bunx --bun skills add shadcn/ui --yes` before Codex is invoked.
 
 On gateway startup, the wrapper installs or updates the Phoenix Hermes profile,
+marks it as the sticky active Hermes profile for the `/opt/data` root,
 verifies required CLIs including `parallel-cli` and `kernel`, verifies
 the profile-owned `distribution-skills/nori-slack-cli` and
 `distribution-skills/loisa-viking-cli` skills exist,
 initializes Codex CLI API-key auth from `OPENAI_API_KEY`, seeds Parallel CLI
 auth under the profile home from `PARALLEL_API_KEY`, names the default Kanban
-board `General Tasks` when it still has Hermes' default display name, starts
-OpenViking from `/opt/data/openviking`, and then runs the requested Hermes
-command. Phoenix passes `KERNEL_API_KEY` for Kernel CLI auth and remote browser
-automation plus `LINKD_API_KEY` for LinkdAPI scripts at runtime.
+board `General Tasks` when it still has Hermes' default display name, restarts
+the upstream dashboard service when enabled so it picks up the installed
+profile, starts OpenViking from `/opt/data/openviking`, and then runs the
+requested Hermes command. Phoenix passes `KERNEL_API_KEY` for Kernel CLI auth
+and remote browser automation plus `LINKD_API_KEY` for LinkdAPI scripts at
+runtime.
 
 Codex CLI auth is runtime state, not a baked image secret. The wrapper stores
 Codex config and API-key login cache under `/opt/data/codex` by default. When

@@ -411,6 +411,13 @@ run_profile_hermes() {
   HERMES_HOME="$profile_dir" HOME="$profile_home_dir" "$@"
 }
 
+truthy() {
+  case "${1:-}" in
+    1|true|TRUE|True|yes|YES|Yes) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 is_local_profile_distribution_repo() {
   case "$profile_distribution_repo" in
     http://*|https://*|ssh://*|git://*|git@*) return 1 ;;
@@ -495,6 +502,21 @@ ensure_phoenix_profile() {
   fi
 
   run_root_hermes hermes profile info "$profile_name" >/dev/null
+  run_root_hermes hermes profile use "$profile_name" >/dev/null
+}
+
+restart_dashboard_service() {
+  local service_dir="${HERMES_DASHBOARD_SERVICE_DIR:-/run/service/dashboard}"
+
+  truthy "${HERMES_DASHBOARD:-}" || return 0
+  [ -x /command/s6-svc ] || return 0
+  [ -p "$service_dir/supervise/control" ] || return 0
+
+  echo "[phoenix] Restarting Hermes dashboard in profile $profile_name"
+  /command/s6-svc -k "$service_dir" || {
+    echo "[phoenix] Hermes dashboard restart signal failed" >&2
+    return 0
+  }
 }
 
 ensure_nori_slack_skill() {
@@ -555,6 +577,7 @@ configure_parallel_cli
 ensure_nori_slack_skill
 ensure_loisa_viking_skill
 ensure_default_kanban_board_name
+restart_dashboard_service
 
 export HERMES_HOME="$profile_dir"
 export HOME="$profile_home_dir"
