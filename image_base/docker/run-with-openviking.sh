@@ -121,6 +121,17 @@ ensure_openviking_cli() {
   fi
 }
 
+patch_openviking_studio_bootstrap() {
+  local patch_script="${OPENVIKING_STUDIO_PATCH_SCRIPT:-/opt/hermes/image_base/phoenix_openviking_studio_patch.py}"
+
+  if [ ! -f "$patch_script" ]; then
+    echo "[openviking] Studio bootstrap patch is not available: $patch_script" >&2
+    exit 1
+  fi
+
+  python "$patch_script"
+}
+
 configure_openviking_cli_language() {
   HOME="$root_home_dir" ov language en >/dev/null
   HOME="$profile_home_dir" ov language en >/dev/null
@@ -565,6 +576,7 @@ PY
 ensure_hermes_cli
 ensure_python
 ensure_openviking_cli
+patch_openviking_studio_bootstrap
 configure_openviking_cli_language
 ensure_composio_cli
 ensure_nori_slack_cli

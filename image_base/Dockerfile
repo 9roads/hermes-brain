@@ -92,7 +92,10 @@ print(f"Installed Phoenix Slack Socket Mode router patch: {module}")
 PY
 
 RUN /opt/hermes/.venv/bin/python /tmp/phoenix_dashboard_oidc_patch.py
-RUN /opt/hermes/.venv/bin/python /tmp/phoenix_openviking_studio_patch.py
+RUN /opt/hermes/.venv/bin/python /tmp/phoenix_openviking_studio_patch.py && \
+    install -D -o hermes -g hermes -m 0644 \
+      /tmp/phoenix_openviking_studio_patch.py \
+      /opt/hermes/image_base/phoenix_openviking_studio_patch.py
 
 RUN set -eux; \
     ln -sfn ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm; \
