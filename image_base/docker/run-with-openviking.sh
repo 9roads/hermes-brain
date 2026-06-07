@@ -151,6 +151,9 @@ config["url"] = os.environ["OPENVIKING_ENDPOINT"]
 config["account"] = os.environ["OPENVIKING_ACCOUNT"]
 config["user"] = os.environ["OPENVIKING_USER"]
 config["agent_id"] = os.environ["OPENVIKING_AGENT_ID"]
+auth_mode = os.environ.get("OPENVIKING_AUTH_MODE", "").strip()
+if auth_mode:
+    config["auth_mode"] = auth_mode
 
 api_key = os.environ.get("OPENVIKING_API_KEY") or os.environ.get("OPENVIKING_ROOT_API_KEY")
 if api_key:

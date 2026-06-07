@@ -69,11 +69,11 @@ the image only if missing. Runtime state, indexes, queues, resources, and
 memory files live under `/opt/data/openviking/`. The default OpenViking log is
 `/opt/data/logs/openviking.log`.
 On every boot, the wrapper patches the persisted OpenViking server config from
-`OPENVIKING_HOST`, `OPENVIKING_PORT`, and `OPENVIKING_ROOT_API_KEY`. Local Docker
-runtime sets these to bind OpenViking on `0.0.0.0:{openvikingPort}` with
-API-key auth while keeping `OPENVIKING_ENDPOINT` loopback for in-container
-Hermes tools. The wrapper also writes the same key into `ovcli.conf` as
-`api_key` so `ov` can talk to the local OpenViking server.
+`OPENVIKING_HOST`, `OPENVIKING_PORT`, `OPENVIKING_AUTH_MODE`, and
+`OPENVIKING_ROOT_API_KEY`. Local Docker runtime sets these to bind OpenViking on
+`0.0.0.0:{openvikingPort}` with trusted auth while keeping `OPENVIKING_ENDPOINT`
+loopback for in-container Hermes tools. The wrapper also writes the same key and
+auth mode into `ovcli.conf` so `ov` can talk to the local OpenViking server.
 
 The `openviking_memory` provider is installed with one Phoenix memory override:
 the built-in personal `profile` category is disabled and a `company` category

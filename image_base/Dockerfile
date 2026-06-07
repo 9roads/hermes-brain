@@ -71,6 +71,7 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
 
 COPY python/phoenix_slack_socket_router.py /tmp/phoenix_slack_socket_router.py
 COPY python/phoenix_dashboard_oidc_patch.py /tmp/phoenix_dashboard_oidc_patch.py
+COPY python/phoenix_openviking_studio_patch.py /tmp/phoenix_openviking_studio_patch.py
 
 RUN /opt/hermes/.venv/bin/python - <<'PY'
 from pathlib import Path
@@ -91,6 +92,7 @@ print(f"Installed Phoenix Slack Socket Mode router patch: {module}")
 PY
 
 RUN /opt/hermes/.venv/bin/python /tmp/phoenix_dashboard_oidc_patch.py
+RUN /opt/hermes/.venv/bin/python /tmp/phoenix_openviking_studio_patch.py
 
 RUN set -eux; \
     ln -sfn ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm; \
