@@ -1,11 +1,11 @@
 ---
 name: nori-slack-cli
-description: Use the nori-slack CLI for Slack Web API work in Phoenix Hermes with the injected Slack bot token.
+description: Use the nori-slack CLI for Slack Web API work in Loisa Hermes with the injected Slack bot token.
 version: 0.1.0
 platforms: [linux, macos]
 metadata:
   hermes:
-    tags: [phoenix, slack, cli, web-api]
+    tags: [loisa, slack, cli, web-api]
     requires_toolsets: [terminal]
 ---
 
@@ -15,7 +15,7 @@ Use this skill when Slack API work needs the shell, such as reading users,
 channels, thread history, or other Slack Web API data outside the native Hermes
 Slack context.
 
-Phoenix installs `nori-slack-cli` in the Hermes image and exposes the
+Loisa installs `nori-slack-cli` in the Hermes image and exposes the
 `nori-slack` command on `PATH`.
 
 Do not use Composio `slack` or `slackbot` toolkits for Slack API actions.
@@ -24,7 +24,7 @@ delivery when it already satisfies the request.
 
 ## Authentication
 
-`nori-slack` reads only `SLACK_BOT_TOKEN`. Phoenix maps legacy `SLACK_TOKEN` to
+`nori-slack` reads only `SLACK_BOT_TOKEN`. Loisa maps legacy `SLACK_TOKEN` to
 `SLACK_BOT_TOKEN` at runtime when needed.
 
 Never print, paste, persist, echo, or include Slack tokens in command output,

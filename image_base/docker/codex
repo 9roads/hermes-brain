@@ -2,8 +2,8 @@
 set -euo pipefail
 
 if [ -z "${CODEX_HOME:-}" ]; then
-  if [ -n "${PHOENIX_CODEX_HOME:-}" ]; then
-    export CODEX_HOME="$PHOENIX_CODEX_HOME"
+  if [ -n "${LOISA_CODEX_HOME:-}" ]; then
+    export CODEX_HOME="$LOISA_CODEX_HOME"
   elif [ -d /opt/data ] || mkdir -p /opt/data 2>/dev/null; then
     export CODEX_HOME=/opt/data/codex
   elif [ -n "${HOME:-}" ]; then

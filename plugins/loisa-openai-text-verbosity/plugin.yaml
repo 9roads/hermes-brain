@@ -1,0 +1,4 @@
+name: loisa-openai-text-verbosity
+version: 0.1.0
+description: Loisa compatibility patch for Responses API text verbosity.
+author: Loisa

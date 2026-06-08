@@ -33,8 +33,8 @@ if [ ! -f package.json ]; then
 fi
 ```
 
-For a new project, do not create a custom Phoenix `AGENTS.md` or other
-Phoenix-specific instruction files before invoking Codex. Bun's React/shadcn
+For a new project, do not create a custom Loisa `AGENTS.md` or other
+Loisa-specific instruction files before invoking Codex. Bun's React/shadcn
 template plus the shadcn skill install are the project baseline. Leave those
 generated files in place.
 
@@ -135,7 +135,7 @@ Use only the bundled publish helper after `bun run build` succeeds. Publishing
 is part of the normal flow, so do not ask for confirmation before running it:
 
 ```bash
-PROFILE_NAME="${PHOENIX_HERMES_PROFILE_NAME:-phoenix}"
+PROFILE_NAME="${LOISA_HERMES_PROFILE_NAME:-loisa}"
 PROFILE_DIR="${HERMES_HOME:-/opt/data/profiles/$PROFILE_NAME}"
 PUBLISH="$PROFILE_DIR/distribution-skills/codex-app-creator/scripts/publish.sh"
 test -x "$PUBLISH"

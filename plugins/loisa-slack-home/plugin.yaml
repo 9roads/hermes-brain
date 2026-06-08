@@ -1,0 +1,8 @@
+name: loisa-slack-home
+version: 0.1.0
+description: Loisa-managed Slack home channel selection and runtime sync.
+author: Loisa
+provides_hooks:
+  - pre_gateway_dispatch
+provides_tools:
+  - set_slack_home_channel

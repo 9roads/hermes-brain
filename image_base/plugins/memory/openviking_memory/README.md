@@ -1,6 +1,6 @@
-# Phoenix OpenViking Memory Provider
+# Loisa OpenViking Memory Provider
 
-`openviking_memory` is the Phoenix general-purpose OpenViking memory provider
+`openviking_memory` is the Loisa general-purpose OpenViking memory provider
 for Hermes. It uses the local OpenViking server as the canonical memory,
 resource, and session archive backend.
 

@@ -1,4 +1,4 @@
-# Phoenix Hermes OpenViking Image
+# Loisa Hermes OpenViking Image
 
 This directory is image build source, not Hermes profile-distribution payload.
 `hermes/distribution.yaml` intentionally does not include `image_base/`.
@@ -6,25 +6,25 @@ This directory is image build source, not Hermes profile-distribution payload.
 Build the custom image from the repository root:
 
 ```bash
-docker build -t phoenix-hermes-openviking:local hermes/image_base
+docker build -t loisa-hermes-openviking:local hermes/image_base
 ```
 
 The image extends
 `nousresearch/hermes-agent:v2026.6.5@sha256:9ad3b04ec916ea2c2da22358fd43b024c788d74073210695af88bfc2e63869b4`.
-That upstream release uses s6-overlay as PID 1, so the Phoenix image entrypoint
+That upstream release uses s6-overlay as PID 1, so the Loisa image entrypoint
 is `/init /opt/hermes/image_base/main-wrapper.sh`. The wrapper drops to the
-`hermes` user and runs the Phoenix OpenViking bootstrap as the s6 main program.
+`hermes` user and runs the Loisa OpenViking bootstrap as the s6 main program.
 
 Run it with a persistent `/opt/data` volume:
 
 ```bash
 docker run --rm -it \
-  -v phoenix-hermes-data:/opt/data \
+  -v loisa-hermes-data:/opt/data \
   -e OPENAI_BASE_URL="$OPENAI_BASE_URL" \
   -e OPENAI_API_KEY="$OPENAI_API_KEY" \
   -e KERNEL_API_KEY="$KERNEL_API_KEY" \
   -e LINKD_API_KEY="$LINKD_API_KEY" \
-  phoenix-hermes-openviking:local gateway run -v
+  loisa-hermes-openviking:local gateway run -v
 ```
 
 The image installs OpenViking `0.3.23`, `httpx` `0.28.1`, `slack_sdk`
@@ -34,7 +34,7 @@ The image installs OpenViking `0.3.23`, `httpx` `0.28.1`, `slack_sdk`
 `0.1.1`, Codex CLI `0.134.0`, Bun `1.3.14`, and the `hermes-lcm` plugin from
 `https://github.com/stephenschoettler/hermes-lcm.git`. The plugin is installed
 into `/opt/hermes/plugins/hermes-lcm` so it is available as a bundled Hermes
-plugin; the Phoenix profile enables `hermes-lcm` and selects
+plugin; the Loisa profile enables `hermes-lcm` and selects
 `context.engine: lcm`.
 
 The Node runtime remains available for bundled CLIs, and Bun plus `bunx` are on
@@ -45,7 +45,7 @@ store. Hermes no longer copies a custom app-creator `AGENTS.md`; new projects
 are initialized with `bun init --react=shadcn --yes` and
 `bunx --bun skills add shadcn/ui --yes` before Codex is invoked.
 
-On gateway startup, the wrapper installs or updates the Phoenix Hermes profile,
+On gateway startup, the wrapper installs or updates the Loisa Hermes profile,
 marks it as the sticky active Hermes profile for the `/opt/data` root,
 verifies required CLIs including `parallel-cli` and `kernel`, verifies
 the profile-owned `distribution-skills/nori-slack-cli` and
@@ -55,7 +55,7 @@ auth under the profile home from `PARALLEL_API_KEY`, names the default Kanban
 board `General Tasks` when it still has Hermes' default display name, restarts
 the upstream dashboard service when enabled so it picks up the installed
 profile, starts OpenViking from `/opt/data/openviking`, and then runs the
-requested Hermes command. Phoenix passes `KERNEL_API_KEY` for Kernel CLI auth
+requested Hermes command. Loisa passes `KERNEL_API_KEY` for Kernel CLI auth
 and remote browser automation plus `LINKD_API_KEY` for LinkdAPI scripts at
 runtime.
 
@@ -75,19 +75,19 @@ On every boot, the wrapper patches the persisted OpenViking server config from
 loopback for in-container Hermes tools. The wrapper also writes the same key into
 `ovcli.conf` so `ov` can talk to the local OpenViking server.
 
-The `openviking_memory` provider is installed with one Phoenix memory override:
+The `openviking_memory` provider is installed with one Loisa memory override:
 the built-in personal `profile` category is disabled and a `company` category
 stores the shared company profile at `viking://user/<space>/memories/company.md`.
 All other memory behavior uses OpenViking's native categories. The provider does
 not expose model tools; interactive memory/resource work uses the profile-owned
 `distribution-skills/loisa-viking-cli` skill and the `ov` or `openviking` CLI.
 
-The wrapper preserves upstream s6 stage2 setup. Phoenix setup and OpenViking
-startup happen after s6 has bootstrapped `/opt/data`; the Phoenix main wrapper
+The wrapper preserves upstream s6 stage2 setup. Loisa setup and OpenViking
+startup happen after s6 has bootstrapped `/opt/data`; the Loisa main wrapper
 then drops to the `hermes` user before running the gateway command.
 `run-with-openviking.sh` also defaults `HERMES_GATEWAY_NO_SUPERVISE=1` so
 upstream Hermes does not redirect `gateway run` into its own per-profile s6
-service. Phoenix keeps a single foreground gateway process as the container main
+service. Loisa keeps a single foreground gateway process as the container main
 program for Nomad.
 
 The image also installs a Python startup patch for Slack Socket Mode. When

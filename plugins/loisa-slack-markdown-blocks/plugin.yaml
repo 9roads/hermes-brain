@@ -1,0 +1,4 @@
+name: loisa-slack-markdown-blocks
+version: 0.1.0
+description: Loisa compatibility patch for Slack Block Kit markdown rendering.
+author: Loisa

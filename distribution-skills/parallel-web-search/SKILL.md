@@ -5,13 +5,13 @@ version: 0.1.0
 platforms: [linux, macos]
 metadata:
   hermes:
-    tags: [phoenix, parallel, web, search, cli]
+    tags: [loisa, parallel, web, search, cli]
     requires_toolsets: [terminal]
 ---
 
 # Parallel Web Search
 
-Use this skill for public web search and current-information lookup. Phoenix
+Use this skill for public web search and current-information lookup. Loisa
 provides authenticated `parallel-cli` at runtime. Do not inspect, print, paste,
 persist, echo, or include Parallel credentials in command output, logs, reports,
 or final responses.

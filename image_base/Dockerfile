@@ -69,9 +69,9 @@ RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir \
     parallel-cli --version && \
     chown -R hermes:hermes /opt/hermes/.venv
 
-COPY python/phoenix_slack_socket_router.py /tmp/phoenix_slack_socket_router.py
-COPY python/phoenix_dashboard_oidc_patch.py /tmp/phoenix_dashboard_oidc_patch.py
-COPY python/phoenix_openviking_studio_patch.py /tmp/phoenix_openviking_studio_patch.py
+COPY python/loisa_slack_socket_router.py /tmp/loisa_slack_socket_router.py
+COPY python/loisa_dashboard_oidc_patch.py /tmp/loisa_dashboard_oidc_patch.py
+COPY python/loisa_openviking_studio_patch.py /tmp/loisa_openviking_studio_patch.py
 
 RUN /opt/hermes/.venv/bin/python - <<'PY'
 from pathlib import Path
@@ -80,22 +80,22 @@ import shutil
 import sysconfig
 
 purelib = Path(sysconfig.get_path("purelib"))
-module = purelib / "phoenix_slack_socket_router.py"
-pth = purelib / "phoenix_slack_socket_router.pth"
+module = purelib / "loisa_slack_socket_router.py"
+pth = purelib / "loisa_slack_socket_router.pth"
 
-shutil.copyfile("/tmp/phoenix_slack_socket_router.py", module)
+shutil.copyfile("/tmp/loisa_slack_socket_router.py", module)
 py_compile.compile(str(module), doraise=True)
-pth.write_text("import phoenix_slack_socket_router\n", encoding="utf-8")
+pth.write_text("import loisa_slack_socket_router\n", encoding="utf-8")
 shutil.chown(module, user="hermes", group="hermes")
 shutil.chown(pth, user="hermes", group="hermes")
-print(f"Installed Phoenix Slack Socket Mode router patch: {module}")
+print(f"Installed Loisa Slack Socket Mode router patch: {module}")
 PY
 
-RUN /opt/hermes/.venv/bin/python /tmp/phoenix_dashboard_oidc_patch.py
-RUN /opt/hermes/.venv/bin/python /tmp/phoenix_openviking_studio_patch.py && \
+RUN /opt/hermes/.venv/bin/python /tmp/loisa_dashboard_oidc_patch.py
+RUN /opt/hermes/.venv/bin/python /tmp/loisa_openviking_studio_patch.py && \
     install -D -o hermes -g hermes -m 0644 \
-      /tmp/phoenix_openviking_studio_patch.py \
-      /opt/hermes/image_base/phoenix_openviking_studio_patch.py
+      /tmp/loisa_openviking_studio_patch.py \
+      /opt/hermes/image_base/loisa_openviking_studio_patch.py
 
 RUN set -eux; \
     ln -sfn ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm; \

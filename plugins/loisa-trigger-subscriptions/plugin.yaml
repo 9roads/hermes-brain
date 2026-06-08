@@ -1,0 +1,13 @@
+name: loisa-trigger-subscriptions
+version: 0.1.0
+description: Loisa-managed Composio trigger subscription tools.
+author: Loisa
+provides_tools:
+  - list_triggers
+  - get_trigger_schema
+  - create_trigger
+  - delete_trigger
+requires_env:
+  - LOISA_BACKEND_URL
+  - LOISA_WORKSPACE_ID
+  - LOISA_HERMES_PLUGIN_TOKEN

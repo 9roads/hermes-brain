@@ -1,7 +1,7 @@
 ---
 name: avoid-ai-writing
 description: Write or revise non-Slack Loisa outputs so they sound direct, specific, and human. Use for internal notes, emails, posts, docs, launch copy, website copy, memos, and other written artifacts. Do not use this for Slack message formatting; use the Slack message skill for Slack-native replies.
-version: 3.4.0-phoenix.2
+version: 3.4.0-loisa.2
 license: MIT
 metadata:
   hermes:

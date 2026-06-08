@@ -13,7 +13,7 @@ if [ "$(id -u)" -eq 0 ]; then
     exec /command/s6-setuidgid hermes "$openviking_runner" "$@"
   fi
 
-  echo "[phoenix] cannot drop root privileges: /command/s6-setuidgid is unavailable" >&2
+  echo "[loisa] cannot drop root privileges: /command/s6-setuidgid is unavailable" >&2
   exit 126
 fi
 

@@ -5,14 +5,14 @@ version: 0.1.0
 platforms: [linux, macos]
 metadata:
   hermes:
-    tags: [phoenix, parallel, web, monitor, cli]
+    tags: [loisa, parallel, web, monitor, cli]
     requires_toolsets: [terminal]
 ---
 
 # Parallel Monitor
 
 Use this skill when the user asks to monitor, watch, track, or alert on web
-changes over time. Monitors are long-running server-side jobs. Phoenix provides
+changes over time. Monitors are long-running server-side jobs. Loisa provides
 authenticated `parallel-cli` at runtime. Do not inspect, print, paste, persist,
 echo, or include Parallel credentials in command output, logs, reports, or
 final responses.

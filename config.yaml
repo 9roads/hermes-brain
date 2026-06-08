@@ -44,14 +44,14 @@ context:
 plugins:
   enabled:
     - hermes-lcm
-    - phoenix-composio-session
-    - phoenix-slack-markdown-blocks
-    - phoenix-slack-thread-gate
-    - phoenix-slack-home
-    - phoenix-trigger-subscriptions
-    - phoenix-openai-text-verbosity
+    - loisa-composio-session
+    - loisa-slack-markdown-blocks
+    - loisa-slack-thread-gate
+    - loisa-slack-home
+    - loisa-trigger-subscriptions
+    - loisa-openai-text-verbosity
   entries:
-    phoenix-slack-thread-gate:
+    loisa-slack-thread-gate:
       provider: openrouter
       model: deepseek/deepseek-v4-pro
       llm:
@@ -86,13 +86,13 @@ platforms:
     gateway_restart_notification: false
     extra:
       allow_admin_from:
-        - "__phoenix_no_slack_admins__"
+        - "__loisa_no_slack_admins__"
       group_allow_admin_from:
-        - "__phoenix_no_slack_admins__"
+        - "__loisa_no_slack_admins__"
       user_allowed_commands:
-        - phoenix
+        - loisa
       group_user_allowed_commands:
-        - phoenix
+        - loisa
 
 memory:
   provider: openviking_memory

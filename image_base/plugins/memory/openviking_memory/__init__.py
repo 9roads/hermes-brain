@@ -1,4 +1,4 @@
-"""Phoenix OpenViking memory provider."""
+"""Loisa OpenViking memory provider."""
 
 from __future__ import annotations
 

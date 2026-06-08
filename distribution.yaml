@@ -1,6 +1,6 @@
-name: phoenix
-version: 0.2.124
-description: Phoenix OpenViking Hermes profile
+name: loisa
+version: 0.2.125
+description: Loisa OpenViking Hermes profile
 distribution_owned:
   # image_base/ is image build source and must not be installed as profile payload.
   - SOUL.md
@@ -10,6 +10,6 @@ distribution_owned:
   - scripts
   - distribution.yaml
 profile:
-  name: phoenix
-  owner: phoenix
+  name: loisa
+  owner: loisa
   source: https://github.com/9roads/hermes-brain

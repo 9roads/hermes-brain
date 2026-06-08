@@ -5,14 +5,14 @@ version: 0.1.0
 platforms: [linux, macos]
 metadata:
   hermes:
-    tags: [phoenix, parallel, web, findall, entity-discovery, cli]
+    tags: [loisa, parallel, web, findall, entity-discovery, cli]
     requires_toolsets: [terminal]
 ---
 
 # Parallel FindAll
 
 Use this skill when the user wants a structured list of entities matching a
-description, not webpages or a narrative answer. Phoenix provides
+description, not webpages or a narrative answer. Loisa provides
 authenticated `parallel-cli` at runtime. Do not inspect, print, paste, persist,
 echo, or include Parallel credentials in command output, logs, reports, or
 final responses.

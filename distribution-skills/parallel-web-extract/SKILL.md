@@ -5,14 +5,14 @@ version: 0.1.0
 platforms: [linux, macos]
 metadata:
   hermes:
-    tags: [phoenix, parallel, web, extract, cli]
+    tags: [loisa, parallel, web, extract, cli]
     requires_toolsets: [terminal]
 ---
 
 # Parallel URL Extraction
 
 Use this skill when the user provides a URL or when search has already narrowed
-the sources to read. Phoenix provides authenticated `parallel-cli` at runtime.
+the sources to read. Loisa provides authenticated `parallel-cli` at runtime.
 Do not inspect, print, paste, persist, echo, or include Parallel credentials in
 command output, logs, reports, or final responses.
 

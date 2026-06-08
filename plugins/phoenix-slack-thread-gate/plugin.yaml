@@ -1,4 +1,0 @@
-name: phoenix-slack-thread-gate
-version: 0.1.0
-description: Phoenix Slack thread relevance gate before assistant typing starts.
-author: Phoenix

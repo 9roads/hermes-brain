@@ -1,13 +1,13 @@
 ---
 name: composio-cli
-description: Use the Composio CLI to search, execute, and proxy tools inside Phoenix-injected Tool Router sessions.
+description: Use the Composio CLI to search, execute, and proxy tools inside Loisa-injected Tool Router sessions.
 ---
 
 # Composio CLI Usage Guide
 
-Use `composio` to operate on the existing Composio Tool Router session that Phoenix injects for the current Hermes session. The CLI can search for tools, execute tool slugs, and proxy provider API requests through connected accounts in that session.
+Use `composio` to operate on the existing Composio Tool Router session that Loisa injects for the current Hermes session. The CLI can search for tools, execute tool slugs, and proxy provider API requests through connected accounts in that session.
 
-Phoenix passes the project-scoped Composio key as `COMPOSIO_API_KEY`. Do not print, paste, or persist it.
+Loisa passes the project-scoped Composio key as `COMPOSIO_API_KEY`. Do not print, paste, or persist it.
 
 ## Session ID
 
@@ -25,7 +25,7 @@ composio execute GMAIL_SEND_EMAIL --session-id "$COMPOSIO_TOOL_ROUTER_SESSION_ID
 composio proxy https://gmail.googleapis.com/gmail/v1/users/me/profile --toolkit gmail --session-id "$COMPOSIO_TOOL_ROUTER_SESSION_ID"
 ```
 
-If a command reports no active connection, use the injected missing-tool URL template. Replace `{toolkit_slug}` with the needed toolkit slug and show that Phoenix URL to the user. Do not use `composio link`, managed Composio auth, or raw workspace/user IDs to create auth links.
+If a command reports no active connection, use the injected missing-tool URL template. Replace `{toolkit_slug}` with the needed toolkit slug and show that Loisa URL to the user. Do not use `composio link`, managed Composio auth, or raw workspace/user IDs to create auth links.
 
 ## Workflow: search -> execute -> proxy
 

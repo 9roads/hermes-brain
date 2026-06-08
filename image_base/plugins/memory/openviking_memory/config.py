@@ -1,4 +1,4 @@
-"""Configuration helpers for the Phoenix OpenViking memory provider."""
+"""Configuration helpers for the Loisa OpenViking memory provider."""
 
 from __future__ import annotations
 

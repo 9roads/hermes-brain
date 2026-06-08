@@ -1,8 +1,8 @@
 memory_type: profile
 description: |
-  Disabled in Phoenix Hermes.
+  Disabled in Loisa Hermes.
 
-  OpenViking's built-in profile memory is for an individual user profile. Phoenix
+  OpenViking's built-in profile memory is for an individual user profile. Loisa
   Hermes uses OpenViking for shared company memory, so user/person identity must
   not be extracted into profile.md.
 directory: "viking://user/{{ user_space }}/memories"

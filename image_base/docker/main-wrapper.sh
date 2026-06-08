@@ -4,7 +4,7 @@ set -euo pipefail
 openviking_runner="/opt/hermes/image_base/run-with-openviking.sh"
 
 if [ ! -x "$openviking_runner" ]; then
-  echo "[phoenix] OpenViking runner is not executable: $openviking_runner" >&2
+  echo "[loisa] OpenViking runner is not executable: $openviking_runner" >&2
   exit 127
 fi
 

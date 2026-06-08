@@ -5,7 +5,7 @@ version: 0.1.0
 platforms: [linux]
 metadata:
   hermes:
-    tags: [phoenix, linkdapi, python, sdk, enrichment]
+    tags: [loisa, linkdapi, python, sdk, enrichment]
     requires_toolsets: [terminal]
 required_environment_variables:
   - name: LINKD_API_KEY

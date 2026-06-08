@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 default_data_root="/opt/data"
-profile_name="${HERMES_PROFILE_NAME:-${PHOENIX_HERMES_PROFILE_NAME:-phoenix}}"
+profile_name="${HERMES_PROFILE_NAME:-${LOISA_HERMES_PROFILE_NAME:-loisa}}"
 profile_distribution_repo="${HERMES_PROFILE_DISTRIBUTION_REPO:-https://github.com/9roads/hermes-brain.git}"
 initial_hermes_home="${HERMES_HOME:-$default_data_root}"
 profile_suffix="/profiles/$profile_name"
@@ -21,7 +21,7 @@ root_bin_dir="$root_home_dir/.local/bin"
 profile_bin_dir="$profile_home_dir/.local/bin"
 
 export HERMES_PROFILE_NAME="$profile_name"
-export PHOENIX_HERMES_PROFILE_NAME="${PHOENIX_HERMES_PROFILE_NAME:-$profile_name}"
+export LOISA_HERMES_PROFILE_NAME="${LOISA_HERMES_PROFILE_NAME:-$profile_name}"
 export HERMES_GATEWAY_NO_SUPERVISE="${HERMES_GATEWAY_NO_SUPERVISE:-1}"
 export PATH="/opt/hermes/bin:/opt/hermes/.venv/bin:$root_bin_dir:$profile_bin_dir:$PATH"
 
@@ -57,8 +57,8 @@ load_env_file() {
 load_env_file "$data_root/.env"
 load_env_file "$profile_dir/.env"
 
-codex_home="${CODEX_HOME:-${PHOENIX_CODEX_HOME:-$data_root/codex}}"
-export PHOENIX_CODEX_HOME="$codex_home"
+codex_home="${CODEX_HOME:-${LOISA_CODEX_HOME:-$data_root/codex}}"
+export LOISA_CODEX_HOME="$codex_home"
 export CODEX_HOME="$codex_home"
 
 if [ -z "${SLACK_TOKEN:-}" ] && [ -n "${SLACK_BOT_TOKEN:-}" ]; then
@@ -105,7 +105,7 @@ ensure_python() {
     return 0
   fi
 
-  echo "[phoenix] python is not available on PATH" >&2
+  echo "[loisa] python is not available on PATH" >&2
   exit 1
 }
 
@@ -122,7 +122,7 @@ ensure_openviking_cli() {
 }
 
 patch_openviking_studio_bootstrap() {
-  local patch_script="${OPENVIKING_STUDIO_PATCH_SCRIPT:-/opt/hermes/image_base/phoenix_openviking_studio_patch.py}"
+  local patch_script="${OPENVIKING_STUDIO_PATCH_SCRIPT:-/opt/hermes/image_base/loisa_openviking_studio_patch.py}"
 
   if [ ! -f "$patch_script" ]; then
     echo "[openviking] Studio bootstrap patch is not available: $patch_script" >&2
@@ -235,7 +235,7 @@ ensure_composio_cli() {
     return 0
   fi
 
-  echo "[phoenix] composio CLI is not available on PATH" >&2
+  echo "[loisa] composio CLI is not available on PATH" >&2
   exit 1
 }
 
@@ -244,13 +244,13 @@ ensure_nori_slack_cli() {
     return 0
   fi
 
-  echo "[phoenix] nori-slack CLI is not available on PATH" >&2
+  echo "[loisa] nori-slack CLI is not available on PATH" >&2
   exit 1
 }
 
 ensure_parallel_cli() {
   if ! command -v parallel-cli >/dev/null 2>&1; then
-    echo "[phoenix] parallel-cli is not available on PATH" >&2
+    echo "[loisa] parallel-cli is not available on PATH" >&2
     exit 1
   fi
 
@@ -286,11 +286,11 @@ auth_file = Path(sys.argv[1])
 tmp_file = auth_file.with_name(f"{auth_file.name}.tmp.{os.getpid()}")
 payload = {
     "version": 1,
-    "selected_org_id": "phoenix",
+    "selected_org_id": "loisa",
     "orgs": {
-        "phoenix": {
+        "loisa": {
             "api_key": api_key,
-            "org_name": "Phoenix",
+            "org_name": "Loisa",
         }
     },
     "client_id": None,
@@ -320,7 +320,7 @@ PY
 
 ensure_kernel_cli() {
   if ! command -v kernel >/dev/null 2>&1; then
-    echo "[phoenix] kernel CLI is not available on PATH" >&2
+    echo "[loisa] kernel CLI is not available on PATH" >&2
     exit 1
   fi
 
@@ -329,12 +329,12 @@ ensure_kernel_cli() {
 
 ensure_bun_cli() {
   if ! command -v bun >/dev/null 2>&1; then
-    echo "[phoenix] bun CLI is not available on PATH" >&2
+    echo "[loisa] bun CLI is not available on PATH" >&2
     exit 1
   fi
 
   if ! command -v bunx >/dev/null 2>&1; then
-    echo "[phoenix] bunx CLI is not available on PATH" >&2
+    echo "[loisa] bunx CLI is not available on PATH" >&2
     exit 1
   fi
 
@@ -483,14 +483,14 @@ for dist_skill in sorted(path for path in distribution_skills.iterdir() if path.
         kept.append(dist_skill.name)
 
 if removed:
-    print("[phoenix] Removed legacy default skill shadows: " + ", ".join(removed))
+    print("[loisa] Removed legacy default skill shadows: " + ", ".join(removed))
 if kept:
-    print("[phoenix] Kept modified local skill overrides: " + ", ".join(kept))
+    print("[loisa] Kept modified local skill overrides: " + ", ".join(kept))
 PY
 }
 
-ensure_phoenix_profile() {
-  echo "[phoenix] Preparing Hermes profile $profile_name in $profile_dir"
+ensure_loisa_profile() {
+  echo "[loisa] Preparing Hermes profile $profile_name in $profile_dir"
 
   if run_root_hermes hermes profile info "$profile_name" >/dev/null 2>&1; then
     if is_local_profile_distribution_repo; then
@@ -526,9 +526,9 @@ restart_dashboard_service() {
   [ -x /command/s6-svc ] || return 0
   [ -p "$service_dir/supervise/control" ] || return 0
 
-  echo "[phoenix] Restarting Hermes dashboard in profile $profile_name"
+  echo "[loisa] Restarting Hermes dashboard in profile $profile_name"
   /command/s6-svc -k "$service_dir" || {
-    echo "[phoenix] Hermes dashboard restart signal failed" >&2
+    echo "[loisa] Hermes dashboard restart signal failed" >&2
     return 0
   }
 }
@@ -540,7 +540,7 @@ ensure_nori_slack_skill() {
     return 0
   fi
 
-  echo "[phoenix] nori-slack-cli skill is missing from Hermes profile $profile_name" >&2
+  echo "[loisa] nori-slack-cli skill is missing from Hermes profile $profile_name" >&2
   exit 1
 }
 
@@ -551,7 +551,7 @@ ensure_loisa_viking_skill() {
     return 0
   fi
 
-  echo "[phoenix] loisa-viking-cli skill is missing from Hermes profile $profile_name" >&2
+  echo "[loisa] loisa-viking-cli skill is missing from Hermes profile $profile_name" >&2
   exit 1
 }
 
@@ -567,9 +567,9 @@ if current_name == desired_name:
     pass
 elif current_name in {"", "Default", "default"}:
     kb.write_board_metadata(kb.DEFAULT_BOARD, name=desired_name)
-    print(f"[phoenix] Named default Kanban board '{desired_name}'")
+    print(f"[loisa] Named default Kanban board '{desired_name}'")
 else:
-    print(f"[phoenix] Keeping existing default Kanban board name '{current_name}'")
+    print(f"[loisa] Keeping existing default Kanban board name '{current_name}'")
 PY
 }
 
@@ -586,7 +586,7 @@ ensure_bun_cli
 configure_bun
 ensure_codex_cli
 configure_codex_cli
-ensure_phoenix_profile
+ensure_loisa_profile
 remove_legacy_distribution_skill_shadows
 configure_parallel_cli
 ensure_nori_slack_skill

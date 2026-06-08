@@ -1,0 +1,4 @@
+name: loisa-slack-thread-gate
+version: 0.1.0
+description: Loisa Slack thread relevance gate before assistant typing starts.
+author: Loisa

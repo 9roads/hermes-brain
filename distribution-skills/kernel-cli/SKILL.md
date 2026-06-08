@@ -5,14 +5,14 @@ version: 0.1.0
 platforms: [linux]
 metadata:
   hermes:
-    tags: [phoenix, kernel, browser, automation, cli]
+    tags: [loisa, kernel, browser, automation, cli]
     requires_toolsets: [terminal]
 ---
 
 # Kernel CLI
 
 Use the preinstalled `kernel` CLI for browser automation and Kernel resource
-management. Phoenix bakes `@onkernel/cli` into the Hermes image and passes the
+management. Loisa bakes `@onkernel/cli` into the Hermes image and passes the
 existing `KERNEL_API_KEY` secret at runtime.
 
 Do not print, paste, persist, echo, or include `KERNEL_API_KEY` in command

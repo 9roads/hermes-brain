@@ -5,7 +5,7 @@ import shutil
 import sys
 import urllib.request
 
-DEFAULT_HERMES_HOME = "/opt/data/profiles/phoenix"
+DEFAULT_HERMES_HOME = "/opt/data/profiles/loisa"
 DEFAULT_OPENVIKING_CONFIG_FILE = "/opt/data/openviking/ov.conf"
 
 
@@ -100,13 +100,13 @@ except Exception as e:
     print(f"linkdapi SDK import failed: {e}", file=sys.stderr)
     sys.exit(1)
 
-# 5. Phoenix connected-tool runtime
+# 5. Loisa connected-tool runtime
 for name in (
     "COMPOSIO_API_KEY",
     "KERNEL_API_KEY",
     "PARALLEL_API_KEY",
-    "PHOENIX_BACKEND_URL",
-    "PHOENIX_HERMES_PLUGIN_TOKEN",
+    "LOISA_BACKEND_URL",
+    "LOISA_HERMES_PLUGIN_TOKEN",
 ):
     if not os.environ.get(name, "").strip():
         print(f"{name} missing from Hermes runtime env", file=sys.stderr)

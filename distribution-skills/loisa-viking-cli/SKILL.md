@@ -5,7 +5,7 @@ version: 0.1.0
 platforms: [linux, macos]
 metadata:
   hermes:
-    tags: [phoenix, openviking, memory, cli]
+    tags: [loisa, openviking, memory, cli]
     requires_toolsets: [terminal]
 ---
 
@@ -14,7 +14,7 @@ metadata:
 Use this skill when you need to inspect or update Loisa's OpenViking-backed
 company memory and resources from the shell.
 
-Phoenix installs OpenViking in the Hermes image and exposes both `ov` and
+Loisa installs OpenViking in the Hermes image and exposes both `ov` and
 `openviking` on `PATH`. Prefer the short `ov` command. Use `openviking` only if
 `ov` is unavailable.
 
@@ -117,7 +117,7 @@ fact is high-confidence, durable company context. Prefer short, source-grounded
 messages.
 
 ```bash
-ov add-memory '[{"role":"user","content":"Remember that Phoenix deploy reviews happen before customer-facing runtime changes."}]'
+ov add-memory '[{"role":"user","content":"Remember that Loisa deploy reviews happen before customer-facing runtime changes."}]'
 ```
 
 Do not capture transient chat, speculation, raw transcripts, long excerpts,

@@ -5,14 +5,14 @@ version: 0.1.0
 platforms: [linux, macos]
 metadata:
   hermes:
-    tags: [phoenix, parallel, web, enrichment, cli]
+    tags: [loisa, parallel, web, enrichment, cli]
     requires_toolsets: [terminal]
 ---
 
 # Parallel Data Enrichment
 
 Use this skill when the user wants to add web-sourced columns to a list of
-companies, people, products, or other entities. Phoenix provides authenticated
+companies, people, products, or other entities. Loisa provides authenticated
 `parallel-cli` at runtime. Do not inspect, print, paste, persist, echo, or
 include Parallel credentials in command output, logs, reports, or final
 responses.

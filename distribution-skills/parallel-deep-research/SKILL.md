@@ -5,7 +5,7 @@ version: 0.1.0
 platforms: [linux, macos]
 metadata:
   hermes:
-    tags: [phoenix, parallel, web, task, research, cli]
+    tags: [loisa, parallel, web, task, research, cli]
     requires_toolsets: [terminal]
 ---
 
@@ -13,7 +13,7 @@ metadata:
 
 Use this skill for Parallel Task-style deep research. It is slower and more
 expensive than `parallel-web-search`; use search for normal lookup,
-fact-checking, and lightweight research. Phoenix provides authenticated
+fact-checking, and lightweight research. Loisa provides authenticated
 `parallel-cli` at runtime. Do not inspect, print, paste, persist, echo, or
 include Parallel credentials in command output, logs, reports, or final
 responses.

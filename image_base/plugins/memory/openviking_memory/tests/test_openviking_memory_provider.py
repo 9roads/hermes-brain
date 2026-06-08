@@ -932,7 +932,7 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
                 provider.handle_tool_call(
                     "loisa_memory_capture",
                     {
-                        "content": "Remember that Phoenix uses OpenViking for durable memory.",
+                        "content": "Remember that Loisa uses OpenViking for durable memory.",
                         "source": "test",
                         "wait": True,
                         "timeout": 10,

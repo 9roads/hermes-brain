@@ -149,7 +149,7 @@ Replace vague endings with concrete next steps.
 
 Use mentions when you want to reference a Slack user, channel, user group/team, or broad audience in Slack.
 
-Before using any Slack ID token, prefer the native Hermes Slack context already attached to the current message, user-provided canonical mention tokens, or another Phoenix-provided Slack lookup surface when available. Do not resolve Slack IDs through Composio `slack` tools; that toolkit is disabled for Hermes tool use. If an exact Slack entity cannot be resolved safely, ask for the canonical mention or link before drafting a mention-heavy message.
+Before using any Slack ID token, prefer the native Hermes Slack context already attached to the current message, user-provided canonical mention tokens, or another Loisa-provided Slack lookup surface when available. Do not resolve Slack IDs through Composio `slack` tools; that toolkit is disabled for Hermes tool use. If an exact Slack entity cannot be resolved safely, ask for the canonical mention or link before drafting a mention-heavy message.
 
 Valid Slack-ready mention forms:
 

@@ -1,0 +1,12 @@
+name: loisa-composio-session
+version: 0.1.0
+description: Loisa backend bootstrap for per-session Composio Tool Router access.
+author: Loisa
+provides_hooks:
+  - pre_gateway_dispatch
+  - pre_llm_call
+requires_env:
+  - LOISA_BACKEND_URL
+  - LOISA_WORKSPACE_ID
+  - LOISA_HERMES_PLUGIN_TOKEN
+  - COMPOSIO_API_KEY
