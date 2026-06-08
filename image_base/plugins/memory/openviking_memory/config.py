@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 DEFAULT_ENDPOINT = "http://127.0.0.1:1933"
 DEFAULT_ACCOUNT = "default"
 DEFAULT_USER_SPACE = "default"
-DEFAULT_AGENT_ID = "hermes-memory"
+DEFAULT_AGENT_ID = "default"
 DEFAULT_TOOLS = {"search", "read", "list", "grep", "add_resource", "capture"}
 REMOTE_RESOURCE_PREFIXES = ("http://", "https://", "git@", "ssh://", "git://")
 

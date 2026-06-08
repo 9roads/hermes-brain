@@ -10,7 +10,7 @@ from pathlib import Path
 
 DEFAULT_OPENVIKING_CONFIG_FILE = "/opt/data/openviking/ov.conf"
 DEFAULT_OPENVIKING_WORKSPACE = "/opt/data/openviking/workspace"
-DEFAULT_AGENT_ID = "hermes-memory"
+DEFAULT_AGENT_ID = "default"
 MARKDOWN_SUFFIXES = {".md", ".markdown"}
 
 

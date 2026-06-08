@@ -630,7 +630,7 @@ export OPENVIKING_ENDPOINT="$openviking_endpoint"
 export OPENVIKING_ACCOUNT="${OPENVIKING_ACCOUNT:-default}"
 export OPENVIKING_USER_SPACE="${OPENVIKING_USER_SPACE:-default}"
 export OPENVIKING_USER="${OPENVIKING_USER:-$OPENVIKING_USER_SPACE}"
-export OPENVIKING_AGENT_ID="${OPENVIKING_AGENT_ID:-hermes-memory}"
+export OPENVIKING_AGENT_ID="${OPENVIKING_AGENT_ID:-default}"
 export OPENVIKING_ROOT_API_KEY="${OPENVIKING_ROOT_API_KEY:-}"
 
 configure_openviking_server_runtime "$openviking_config_file"

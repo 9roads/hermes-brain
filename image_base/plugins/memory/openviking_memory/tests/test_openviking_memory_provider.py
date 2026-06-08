@@ -89,7 +89,7 @@ class OpenVikingMemoryProviderTests(unittest.TestCase):
 
         self.assertEqual(config.account, "default")
         self.assertEqual(config.user_space, "default")
-        self.assertEqual(config.agent_id, "hermes-memory")
+        self.assertEqual(config.agent_id, "default")
         self.assertEqual(config.api_key, "")
         self.assertEqual(config.memory_root, "viking://user/default/memories")
         self.assertEqual(config.resources_root, "viking://resources")

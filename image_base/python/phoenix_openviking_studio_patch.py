@@ -48,7 +48,7 @@ BOOTSTRAP_SCRIPT = r'''<script id="phoenix-openviking-studio-bootstrap">
     var agentId =
       typeof payload.agentId === "string" && payload.agentId.trim()
         ? payload.agentId
-        : "hermes-memory";
+        : "default";
     var connection = {
       baseUrl: payload.baseUrl,
       apiKey: payload.apiKey,

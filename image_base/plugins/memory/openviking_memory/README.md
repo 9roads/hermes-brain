@@ -18,7 +18,7 @@ Runtime defaults:
 - endpoint: `http://127.0.0.1:1933`
 - account: `default`
 - user namespace: `default`
-- internal agent id: `OPENVIKING_AGENT_ID`, then `hermes-memory`
+- internal agent id: `OPENVIKING_AGENT_ID`, then `default`
 - API key: `OPENVIKING_API_KEY`, then `OPENVIKING_ROOT_API_KEY`
 
 `OPENVIKING_AGENT` is intentionally ignored. The agent id is provenance, not a
