@@ -12,10 +12,17 @@ Required Loisa runtime env for connected tools:
 - `LOISA_WORKSPACE_ID`
 - `LOISA_HERMES_PLUGIN_TOKEN`
 - `COMPOSIO_API_KEY`
+- `OPENROUTER_API_KEY`
 - `LINKD_API_KEY`
 - `KERNEL_API_KEY`
 - `PARALLEL_API_KEY`
 - `SLACK_BOT_TOKEN`
+
+The default profile model path is OpenRouter `openai/gpt-5.5` with `xhigh`
+reasoning and no fallback chain. If both `OPENAI_BASE_URL` and `OPENAI_API_KEY`
+are present at Hermes startup, the Loisa image wrapper applies a temporary
+OpenAI-compatible model override with the Hermes CLI after the forced profile
+install/update and before `profile use`.
 
 When Hermes connects through the Loisa Slack Socket Mode router,
 `SLACK_APP_TOKEN` is the Loisa fake xapp token and `SLACK_SOCKET_API_BASE`

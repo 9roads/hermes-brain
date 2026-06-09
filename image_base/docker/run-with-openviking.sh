@@ -489,6 +489,23 @@ if kept:
 PY
 }
 
+apply_openai_model_override() {
+  if [ -z "${OPENAI_BASE_URL:-}" ] || [ -z "${OPENAI_API_KEY:-}" ]; then
+    return 0
+  fi
+
+  echo "[loisa] Applying OpenAI-compatible Hermes model config"
+  run_profile_hermes hermes config set model.provider custom
+  run_profile_hermes hermes config set model.default gpt-5.5
+  run_profile_hermes hermes config set model.base_url '${OPENAI_BASE_URL}'
+  run_profile_hermes hermes config set model.api_key '${OPENAI_API_KEY}'
+  run_profile_hermes hermes config set model.api_mode codex_responses
+  run_profile_hermes hermes fallback clear
+  run_profile_hermes hermes config set fallback_providers.0.provider openrouter
+  run_profile_hermes hermes config set fallback_providers.0.model moonshotai/kimi-k2.6
+  run_profile_hermes hermes config set fallback_providers.0.reasoning_effort xhigh
+}
+
 ensure_loisa_profile() {
   echo "[loisa] Preparing Hermes profile $profile_name in $profile_dir"
 
@@ -516,6 +533,7 @@ ensure_loisa_profile() {
   fi
 
   run_root_hermes hermes profile info "$profile_name" >/dev/null
+  apply_openai_model_override
   run_root_hermes hermes profile use "$profile_name" >/dev/null
 }
 

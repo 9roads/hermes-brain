@@ -20,8 +20,7 @@ Run it with a persistent `/opt/data` volume:
 ```bash
 docker run --rm -it \
   -v loisa-hermes-data:/opt/data \
-  -e OPENAI_BASE_URL="$OPENAI_BASE_URL" \
-  -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+  -e OPENROUTER_API_KEY="$OPENROUTER_API_KEY" \
   -e KERNEL_API_KEY="$KERNEL_API_KEY" \
   -e LINKD_API_KEY="$LINKD_API_KEY" \
   loisa-hermes-openviking:local gateway run -v
@@ -50,8 +49,7 @@ marks it as the sticky active Hermes profile for the `/opt/data` root,
 verifies required CLIs including `parallel-cli` and `kernel`, verifies
 the profile-owned `distribution-skills/nori-slack-cli` and
 `distribution-skills/loisa-viking-cli` skills exist,
-initializes Codex CLI API-key auth from `OPENAI_API_KEY`, seeds Parallel CLI
-auth under the profile home from `PARALLEL_API_KEY`, names the default Kanban
+seeds Parallel CLI auth under the profile home from `PARALLEL_API_KEY`, names the default Kanban
 board `General Tasks` when it still has Hermes' default display name, restarts
 the upstream dashboard service when enabled so it picks up the installed
 profile, starts OpenViking from `/opt/data/openviking`, and then runs the
@@ -59,10 +57,16 @@ requested Hermes command. Loisa passes `KERNEL_API_KEY` for Kernel CLI auth
 and remote browser automation plus `LINKD_API_KEY` for LinkdAPI scripts at
 runtime.
 
+The profile defaults to OpenRouter `openai/gpt-5.5` with `xhigh` reasoning and
+no fallback chain. When both `OPENAI_BASE_URL` and `OPENAI_API_KEY` are present,
+the wrapper applies a temporary OpenAI-compatible model override with the Hermes
+CLI immediately after the forced profile update and before `profile use`.
+
 Codex CLI auth is runtime state, not a baked image secret. The wrapper stores
 Codex config and API-key login cache under `/opt/data/codex` by default. When
-`OPENAI_BASE_URL` is set, it is written to Codex's user-level
-`openai_base_url` config.
+both `OPENAI_API_KEY` and `OPENAI_BASE_URL` are set, Codex CLI auth is
+initialized from that runtime state and the base URL is written to Codex's
+user-level `openai_base_url` config.
 
 On first boot, `/opt/data/openviking/ov.conf` and `ovcli.conf` are copied from
 the image only if missing. Runtime state, indexes, queues, resources, and
