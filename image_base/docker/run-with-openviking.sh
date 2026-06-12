@@ -502,7 +502,7 @@ apply_openai_model_override() {
   run_profile_hermes hermes config set model.api_mode codex_responses
   run_profile_hermes hermes fallback clear
   run_profile_hermes hermes config set fallback_providers.0.provider openrouter
-  run_profile_hermes hermes config set fallback_providers.0.model moonshotai/kimi-k2.6
+  run_profile_hermes hermes config set fallback_providers.0.model moonshotai/kimi-k2.7-code
   run_profile_hermes hermes config set fallback_providers.0.reasoning_effort xhigh
 }
 
